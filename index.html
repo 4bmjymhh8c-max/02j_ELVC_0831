@@ -548,7 +548,7 @@ function isPlaceholderStructure(sections){
 function structureRef(tab){ return db.collection("structures").doc(tab); }
 function checksRef(tab, day){ return db.collection("checks").doc(tab+"_"+day); }
 function metaRef(){ return db.collection("meta").doc("flags"); }
-function backupsCol(){ return db.collection("backups"); }
+function backupsCol(tab){ return db.collection("backups_"+tab); }
 
 function countStats(tab, checks){
   const sections = structures[tab] || [];
@@ -1119,7 +1119,7 @@ async function createBackup(silent){
   if(isHistoryMode()) return;
   if(!firebaseReady){ if(!silent) showConfigWarningOnce(); return; }
   try{
-    await backupsCol().add({
+    await backupsCol(currentTab).add({
       tab: currentTab,
       structure: structures[currentTab],
       checks: todayChecked,
@@ -1135,11 +1135,11 @@ async function createBackup(silent){
 }
 async function pruneBackups(){
   try{
-    const q = await backupsCol().where("tab","==",currentTab).orderBy("createdAt","desc").get();
+    const q = await backupsCol(currentTab).orderBy("createdAt","desc").get();
     const docs = q.docs;
     if(docs.length>BACKUP_LIMIT){
       const excess = docs.slice(BACKUP_LIMIT);
-      for(const d of excess){ await backupsCol().doc(d.id).delete(); }
+      for(const d of excess){ await backupsCol(currentTab).doc(d.id).delete(); }
     }
   }catch(e){ /* 一覧整理の失敗は致命的ではないため無視 */ }
 }
@@ -1164,7 +1164,7 @@ async function openRestoreModal(){
     return;
   }
   try{
-    const q = await backupsCol().where("tab","==",currentTab).orderBy("createdAt","desc").limit(BACKUP_LIMIT).get();
+    const q = await backupsCol(currentTab).orderBy("createdAt","desc").limit(BACKUP_LIMIT).get();
     if(q.empty){
       listEl.innerHTML=`<div class="empty-note">まだバックアップがありません</div>`;
       return;
@@ -1184,7 +1184,7 @@ async function openRestoreModal(){
         const key=btn.getAttribute("data-restore-key");
         if(!confirm("このバックアップの内容で復元します。今の内容は上書きされます。よろしいですか？")) return;
         try{
-          const doc = await backupsCol().doc(key).get();
+          const doc = await backupsCol(currentTab).doc(key).get();
           const payload = doc.data();
           pushUndo(currentTab);
           structures[currentTab]=payload.structure;
