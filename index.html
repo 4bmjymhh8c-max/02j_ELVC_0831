@@ -304,6 +304,7 @@
 <!-- Firebase SDK (compat版。設定は下部スクリプト内 firebaseConfig を参照) -->
 <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-auth-compat.js"></script>
 
 <script>
 /* =========================================================================
@@ -314,19 +315,21 @@
    2. 「Firestore Database」を作成（本番環境モードでOK。下記ルール参照）
    3. プロジェクト設定 → 全般 → 「マイアプリ」→ ウェブアプリを追加 →
       表示される firebaseConfig の値をここに貼り付け
-   4. Firestore の「ルール」タブに以下を設定（社内利用・認証なしの簡易運用例）：
+   4. Authentication → Sign-in method → 「匿名」を有効化
+   5. Firestore の「ルール」タブに以下を設定して「公開」：
 
       rules_version = '2';
       service cloud.firestore {
         match /databases/{database}/documents {
           match /{document=**} {
-            allow read, write: if true;
+            allow read, write: if request.auth != null;
           }
         }
       }
 
-      ※ 認証なしで誰でも読み書きできる設定です。社内ネットワーク限定運用など、
-        用途に応じてルールは調整してください。
+      ※ アプリが自動で匿名ログインしてからFirestoreにアクセスするため、
+        利用者が何かをログインする必要はありません。ただし、Firestoreへの
+        直接アクセス（アプリを経由しないアクセス）は防げます。
    ========================================================================= */
 const firebaseConfig = {
   apiKey: "AIzaSyBsenI7Zp4ECZprIsM2kUVC-63ncIF8HvE",
@@ -347,7 +350,7 @@ function isConfigPlaceholder(){
   return !firebaseConfig.apiKey || firebaseConfig.apiKey === "YOUR_API_KEY";
 }
 
-function initFirebase(){
+async function initFirebase(){
   if(isConfigPlaceholder()){
     showConfigBanner();
     return;
@@ -356,6 +359,12 @@ function initFirebase(){
     firebase.initializeApp(firebaseConfig);
     db = firebase.firestore();
     try{ db.enablePersistence({ synchronizeTabs:true }); }catch(e){ /* 複数タブ or 非対応ブラウザは無視 */ }
+    await new Promise((resolve, reject)=>{
+      firebase.auth().onAuthStateChanged(user=>{
+        if(user){ resolve(); }
+      }, reject);
+      firebase.auth().signInAnonymously().catch(reject);
+    });
     firebaseReady = true;
   }catch(e){
     firebaseReady = false;
@@ -1224,7 +1233,7 @@ document.getElementById("closeModal").addEventListener("click", ()=>{
 
 /* ---------- init ---------- */
 (async function init(){
-  initFirebase();
+  await initFirebase();
   setupConnectionBanner();
   await loadTab(currentTab);
   render();
