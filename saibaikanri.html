@@ -1,0 +1,1234 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, viewport-fit=cover">
+<title>栽培管理リスト</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Zen+Maru+Gothic:wght@500;700;900&family=Noto+Sans+JP:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --soil-900:#26402f;
+    --soil-800:#2f4d38;
+    --leaf-600:#4c7a52;
+    --leaf-500:#6b8f71;
+    --leaf-100:#dfe9de;
+    --sand-100:#f2efe4;
+    --card:#fbfaf5;
+    --bark:#8c6a4e;
+    --ink:#233227;
+    --ink-soft:#5c6b5f;
+    --line:#e1ddcd;
+    --done:#4c7a52;
+    --alert:#c1613f;
+  }
+  *{box-sizing:border-box; -webkit-tap-highlight-color: transparent;}
+  html,body{margin:0;padding:0;}
+  html{ height:100%; }
+  body{
+    background:var(--sand-100);
+    color:var(--ink);
+    font-family:"Noto Sans JP",sans-serif;
+    padding-bottom:calc(24px + env(safe-area-inset-bottom));
+    overscroll-behavior-y:contain;
+    touch-action:manipulation;
+  }
+  h1,h2,h3,.brand{font-family:"Zen Maru Gothic",sans-serif;}
+
+  header.top{
+    position:sticky; top:0; z-index:30;
+    background:var(--soil-900);
+    color:#fff;
+    padding:calc(9px + env(safe-area-inset-top)) 14px 6px 14px;
+    box-shadow:0 2px 10px rgba(38,64,47,.25);
+  }
+  .brand-row{
+    display:flex; align-items:center; justify-content:space-between;
+    gap:10px;
+  }
+  .brand{font-weight:900; font-size:15.5px; letter-spacing:.02em;}
+  .date-pill{
+    font-size:11px; color:#e7f0e6; background:rgba(255,255,255,.08);
+    padding:4px 9px; border-radius:999px; white-space:nowrap;
+  }
+
+  nav.tabs{
+    display:flex; gap:4px; margin-top:8px;
+  }
+  nav.tabs button{
+    flex:1; appearance:none; border:none; background:transparent;
+    color:#c9d9c9; font-family:"Zen Maru Gothic",sans-serif; font-weight:700;
+    font-size:13px; padding:6px 4px 7px; cursor:pointer;
+    border-bottom:3px solid transparent;
+    transition:color .15s ease, border-color .15s ease;
+  }
+  nav.tabs button.active{
+    color:#fff; border-bottom-color:#a6d6ab;
+  }
+
+  /* ---- 過去7日間の日付選択チップ ---- */
+  .date-select{
+    display:flex; gap:5px; overflow-x:auto; margin-top:7px; padding-bottom:1px;
+    -webkit-overflow-scrolling:touch; scrollbar-width:none;
+  }
+  .date-select::-webkit-scrollbar{ display:none; }
+  .date-chip{
+    flex:0 0 auto; display:flex; flex-direction:column; align-items:center; gap:0;
+    border:1px solid rgba(255,255,255,.18); background:rgba(255,255,255,.06);
+    border-radius:10px; padding:5px 9px; color:#dfe9de; font-size:10px;
+    cursor:pointer; min-width:42px; font-family:"Noto Sans JP",sans-serif;
+  }
+  .date-chip .dow{font-weight:700; font-size:11px; font-family:"Zen Maru Gothic",sans-serif;}
+  .date-chip .badge{font-size:9px; color:#cfe0d2; margin-top:0;}
+  .date-chip .today-tag{font-size:8.5px; background:#a6d6ab; color:#1c3320; border-radius:5px; padding:0 4px; margin-top:1px; font-weight:700;}
+  .date-chip.active{ background:#fff; color:var(--soil-800); border-color:#fff; }
+  .date-chip.active .badge{ color:var(--leaf-600); }
+  .date-chip.has-data:not(.active){ border-color:rgba(166,214,171,.55); }
+
+  .sprout-wrap{
+    display:flex; align-items:center; gap:10px;
+    background:rgba(255,255,255,.06);
+    margin:8px 0 0; padding:7px 11px; border-radius:12px;
+  }
+  .sprout-svg{flex:0 0 auto; width:30px; height:34px;}
+  .progress-text{flex:1; min-width:0;}
+  .progress-text .big{font-family:"Zen Maru Gothic",sans-serif; font-weight:900; font-size:14px; color:#fff; white-space:nowrap;}
+  .progress-text .small{display:none;}
+  .bar-track{height:6px; border-radius:99px; background:rgba(255,255,255,.15); margin-top:4px; overflow:hidden;}
+  .bar-fill{height:100%; background:linear-gradient(90deg,#8fc79a,#c9e7a8); border-radius:99px; transition:width .3s ease;}
+
+  /* ---- top action bar (画面上部・ヘッダー内に固定表示) ---- */
+  .top-actions{
+    display:flex; flex-wrap:wrap; gap:6px;
+    margin:8px 0 8px;
+  }
+  .foot-btn{
+    border:1px solid rgba(255,255,255,.18); background:rgba(255,255,255,.07); color:#e7f0e6;
+    border-radius:999px; padding:6px 11px; font-size:11.5px; cursor:pointer;
+    display:flex; align-items:center; gap:5px; min-height:30px;
+    font-family:"Noto Sans JP",sans-serif;
+  }
+  .foot-btn:active{ background:rgba(255,255,255,.16); }
+  .foot-btn:disabled{opacity:.35;}
+  .foot-btn.danger{color:#ffd3bf; border-color:rgba(193,97,63,.5); background:rgba(193,97,63,.15);}
+
+  /* ---- 接続状態バナー ---- */
+  .conn-banner{
+    display:none; align-items:center; gap:8px;
+    font-size:11.5px; color:#ffe6d6; background:rgba(193,97,63,.22);
+    border:1px solid rgba(193,97,63,.4); border-radius:10px;
+    padding:7px 10px; margin-top:10px;
+  }
+  .conn-banner.show{display:flex;}
+  .conn-dot{width:7px; height:7px; border-radius:50%; background:var(--alert); flex:0 0 auto;}
+
+  main{padding:12px 16px 16px; max-width:640px; margin:0 auto;}
+
+  /* ---- 過去記録閲覧中バナー ---- */
+  .history-banner{
+    display:flex; align-items:center; justify-content:space-between; gap:10px;
+    background:#eef4ec; border:1px solid #cfe4c9; color:var(--leaf-600);
+    border-radius:12px; padding:11px 13px; margin-bottom:12px; font-size:12.5px; font-weight:600;
+  }
+  .history-banner button{
+    border:none; background:var(--leaf-600); color:#fff; border-radius:999px;
+    padding:8px 13px; font-size:12px; cursor:pointer; flex:0 0 auto; font-weight:600;
+  }
+
+  .section-card{
+    background:var(--card);
+    border:1px solid var(--line);
+    border-radius:14px;
+    margin-bottom:9px;
+    overflow:hidden;
+  }
+  .section-card.readonly{opacity:.92;}
+  .section-head{
+    display:flex; align-items:center; justify-content:space-between;
+    padding:11px 14px; cursor:pointer; gap:10px;
+    user-select:none;
+  }
+  .section-head .titles{display:flex; flex-direction:column; min-width:0;}
+  .section-title{font-family:"Zen Maru Gothic",sans-serif; font-weight:700; font-size:15.5px; color:var(--soil-800);}
+  .section-assignee{font-size:11.5px; color:var(--bark); margin-top:2px; font-weight:500;}
+  .section-meta{display:flex; align-items:center; gap:8px; flex:0 0 auto;}
+  .section-count{font-size:12px; color:var(--ink-soft); font-weight:600; white-space:nowrap;}
+  .icon-btn{width:34px; height:34px; border:none; background:none; display:flex; align-items:center; justify-content:center; color:#b9ab98; cursor:pointer; border-radius:8px; flex:0 0 auto;}
+  .icon-btn:active{background:#f1ece0;}
+  .icon-btn svg{width:16px; height:16px;}
+  .chev{width:18px; height:18px; transition:transform .2s ease; color:var(--leaf-500); flex:0 0 auto;}
+  .section-card.open .chev{transform:rotate(90deg);}
+  .section-card.all-done{background:#f2f8f0; border-color:#cfe4c9;}
+  .section-card.all-done .section-title{color:var(--leaf-600);}
+
+  .task-list{max-height:0; overflow:hidden; transition:max-height .25s ease;}
+  .section-card.open .task-list{max-height:2400px;}
+  .task-row{
+    display:flex; align-items:flex-start; gap:11px;
+    padding:11px 14px 11px 16px; border-top:1px solid var(--line);
+  }
+  .check{
+    flex:0 0 auto; width:26px; height:26px; margin-top:1px;
+    border-radius:8px; border:2px solid #b9c9b6; background:#fff;
+    display:flex; align-items:center; justify-content:center; cursor:pointer;
+    transition:background .12s ease, border-color .12s ease, transform .08s ease;
+  }
+  .check.checked{ background:var(--done); border-color:var(--done); }
+  .check.checked svg{display:block;}
+  .check svg{display:none; width:15px; height:15px; color:#fff;}
+  .check:active{transform:scale(.9);}
+  .check.readonly{cursor:default;}
+  .check.readonly:active{transform:none;}
+  .task-text{font-size:14.5px; line-height:1.55; padding-top:2px; word-break:break-word;}
+  .task-main{flex:1; min-width:0;}
+  .task-assignee{font-size:11px; color:var(--bark); margin-top:3px; font-weight:600;}
+  .task-text.checked ~ .task-assignee, .task-main .task-text.checked + .task-assignee{color:#b9c2b5;}
+  .task-text.checked{color:#9aa79a; text-decoration:line-through;}
+  .task-text a.task-link{color:var(--leaf-600); text-decoration:underline; word-break:break-all;}
+  .task-text.checked a.task-link{color:#9aa79a;}
+  .task-remove{flex:0 0 auto; border:none; background:none; color:#c9bfae; font-size:20px; cursor:pointer; padding:2px 6px; min-width:32px; min-height:32px;}
+
+  .add-row{
+    display:flex; gap:8px; padding:10px 14px 14px; border-top:1px solid var(--line);
+  }
+  .add-row input{
+    flex:1; border:1px solid var(--line); border-radius:10px; padding:10px 10px;
+    font-family:"Noto Sans JP",sans-serif; font-size:16px; background:#fff; min-width:0;
+  }
+  .add-row button{
+    border:none; background:var(--leaf-600); color:#fff; border-radius:10px;
+    padding:8px 16px; font-size:13px; font-weight:600; cursor:pointer; flex:0 0 auto;
+  }
+
+  .add-section-card{
+    border:2px dashed #cdbfa0; border-radius:16px; padding:14px; margin-bottom:12px;
+    background:transparent;
+  }
+  .add-section-toggle{
+    width:100%; border:none; background:none; color:var(--bark); font-weight:700;
+    font-family:"Zen Maru Gothic",sans-serif; font-size:14.5px; cursor:pointer; padding:6px;
+  }
+  .add-section-form{display:none; flex-direction:column; gap:8px; margin-top:10px;}
+  .add-section-form.show{display:flex;}
+  .add-section-form input{border:1px solid var(--line); border-radius:10px; padding:10px 11px; font-size:16px; font-family:"Noto Sans JP",sans-serif;}
+  .add-section-form .btn-row{display:flex; gap:8px;}
+  .add-section-form button{border:none; border-radius:10px; padding:10px 14px; font-size:13px; font-weight:600; cursor:pointer;}
+  .add-section-form .primary{background:var(--leaf-600); color:#fff; flex:1;}
+  .add-section-form .cancel{background:#efece2; color:var(--ink-soft);}
+
+  .toast{
+    position:fixed; left:50%; bottom:calc(24px + env(safe-area-inset-bottom)); transform:translateX(-50%) translateY(20px);
+    background:var(--soil-900); color:#fff; padding:10px 18px; border-radius:999px;
+    font-size:13px; opacity:0; transition:opacity .2s ease, transform .2s ease;
+    pointer-events:none; z-index:60; max-width:85vw; text-align:center;
+  }
+  .toast.show{opacity:1; transform:translateX(-50%) translateY(0);}
+
+  .modal-overlay{
+    position:fixed; inset:0; background:rgba(35,50,39,.45); z-index:70;
+    display:none; align-items:flex-end; justify-content:center;
+  }
+  .modal-overlay.show{display:flex;}
+  .modal-sheet{
+    background:#fff; width:100%; max-width:640px; border-radius:18px 18px 0 0;
+    padding:18px 16px calc(22px + env(safe-area-inset-bottom)); max-height:75vh; overflow-y:auto;
+  }
+  .modal-title{font-family:"Zen Maru Gothic",sans-serif; font-weight:700; font-size:16px; color:var(--soil-800); margin-bottom:4px;}
+  .modal-sub{font-size:12px; color:var(--ink-soft); margin-bottom:14px;}
+  .backup-item{
+    display:flex; align-items:center; justify-content:space-between; gap:10px;
+    padding:11px 4px; border-bottom:1px solid var(--line);
+  }
+  .backup-item .info{font-size:13px; color:var(--ink);}
+  .backup-item .info small{display:block; color:var(--ink-soft); font-size:11px; margin-top:2px;}
+  .backup-item button{border:none; background:var(--leaf-100); color:var(--leaf-600); border-radius:9px; padding:8px 13px; font-size:12.5px; font-weight:600; cursor:pointer; flex:0 0 auto; min-height:36px;}
+  .modal-close{
+    display:block; width:100%; margin-top:14px; border:none; background:#efece2; color:var(--ink-soft);
+    border-radius:12px; padding:12px; font-size:13.5px; cursor:pointer; font-weight:600;
+  }
+  .empty-note{text-align:center; color:var(--ink-soft); font-size:12.5px; padding:14px 10px 4px;}
+
+  .config-banner{
+    background:#fff3e0; border:1px solid #f0c98a; color:#7a4b12; border-radius:12px;
+    padding:12px 14px; margin:0 0 12px; font-size:12.5px; line-height:1.6;
+  }
+  .config-banner code{background:#fff; border:1px solid #f0c98a; border-radius:6px; padding:1px 5px; font-size:11.5px;}
+</style>
+</head>
+<body>
+
+<header class="top">
+  <div class="brand-row">
+    <div class="brand">栽培管理リスト</div>
+    <div class="date-pill" id="datePill">–</div>
+  </div>
+  <nav class="tabs" id="tabNav">
+    <button data-tab="asa" class="active">朝管理</button>
+    <button data-tab="hiru">昼管理</button>
+    <button data-tab="yugata">夕管理</button>
+  </nav>
+
+  <div class="date-select" id="dateSelect"></div>
+
+  <div class="sprout-wrap">
+    <svg class="sprout-svg" id="sprout" width="46" height="52" viewBox="0 0 46 52"></svg>
+    <div class="progress-text">
+      <div class="big" id="progressBig">0 / 0</div>
+      <div class="small" id="progressSmall">完了したタスク</div>
+      <div class="bar-track"><div class="bar-fill" id="barFill" style="width:0%"></div></div>
+    </div>
+  </div>
+
+  <div class="top-actions">
+    <button class="foot-btn" id="undoBtn" disabled>↩ 元に戻す</button>
+    <button class="foot-btn" id="backupBtn">💾 保存</button>
+    <button class="foot-btn" id="restoreBtn">📂 復元する</button>
+  </div>
+
+  <div class="conn-banner" id="connBanner"><span class="conn-dot"></span><span id="connBannerText">オフラインです。通信が回復すると自動的に同期されます</span></div>
+</header>
+
+<main id="main"></main>
+
+<div class="modal-overlay" id="restoreModal">
+  <div class="modal-sheet">
+    <div class="modal-title">バックアップから復元</div>
+    <div class="modal-sub" id="restoreSub">このタブの保存済みバックアップ一覧</div>
+    <div id="backupList"></div>
+    <button class="modal-close" id="closeModal">閉じる</button>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<!-- Firebase SDK (compat版。設定は下部スクリプト内 firebaseConfig を参照) -->
+<script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-firestore-compat.js"></script>
+
+<script>
+/* =========================================================================
+   Firebase 設定
+   -------------------------------------------------------------------------
+   下記の値を、ご自身の Firebase プロジェクトの設定に書き換えてください。
+   1. https://console.firebase.google.com/ でプロジェクトを作成
+   2. 「Firestore Database」を作成（本番環境モードでOK。下記ルール参照）
+   3. プロジェクト設定 → 全般 → 「マイアプリ」→ ウェブアプリを追加 →
+      表示される firebaseConfig の値をここに貼り付け
+   4. Firestore の「ルール」タブに以下を設定（社内利用・認証なしの簡易運用例）：
+
+      rules_version = '2';
+      service cloud.firestore {
+        match /databases/{database}/documents {
+          match /{document=**} {
+            allow read, write: if true;
+          }
+        }
+      }
+
+      ※ 認証なしで誰でも読み書きできる設定です。社内ネットワーク限定運用など、
+        用途に応じてルールは調整してください。
+   ========================================================================= */
+const firebaseConfig = {
+  apiKey: "AIzaSyBsenI7Zp4ECZprIsM2kUVC-63ncIF8HvE",
+  authDomain: "kyujitukanri.firebaseapp.com",
+  projectId: "kyujitukanri",
+  storageBucket: "kyujitukanri.firebasestorage.app",
+  messagingSenderId: "643196836428",
+  appId: "1:643196836428:web:0f847a664907bb9dddf2e9"
+};
+
+const HISTORY_DAYS = 7; // 過去何日分の記録を保持するか
+const BACKUP_LIMIT = 30; // バックアップの保持件数
+
+let db = null;
+let firebaseReady = false;
+
+function isConfigPlaceholder(){
+  return !firebaseConfig.apiKey || firebaseConfig.apiKey === "YOUR_API_KEY";
+}
+
+function initFirebase(){
+  if(isConfigPlaceholder()){
+    showConfigBanner();
+    return;
+  }
+  try{
+    firebase.initializeApp(firebaseConfig);
+    db = firebase.firestore();
+    try{ db.enablePersistence({ synchronizeTabs:true }); }catch(e){ /* 複数タブ or 非対応ブラウザは無視 */ }
+    firebaseReady = true;
+  }catch(e){
+    firebaseReady = false;
+    showToast("Firebaseの初期化に失敗しました。設定を確認してください");
+  }
+}
+
+function showConfigBanner(){
+  const main = document.getElementById("main");
+  const banner = document.createElement("div");
+  banner.className = "config-banner";
+  banner.innerHTML = `⚠️ Firebaseが未設定です。HTMLファイル内の <code>firebaseConfig</code> をご自身のプロジェクトの値に書き換えてください。設定するまでデータは保存・同期されません。`;
+  main.appendChild(banner);
+}
+
+/* ---------- 接続状態バナー ---------- */
+function setupConnectionBanner(){
+  updateConnBanner();
+  window.addEventListener("online", updateConnBanner);
+  window.addEventListener("offline", updateConnBanner);
+}
+function updateConnBanner(){
+  const banner = document.getElementById("connBanner");
+  const text = document.getElementById("connBannerText");
+  if(!navigator.onLine){
+    text.textContent = "オフラインです。通信が回復すると自動的に同期されます";
+    banner.classList.add("show");
+  }else{
+    banner.classList.remove("show");
+  }
+}
+function flashConnError(msg){
+  const banner = document.getElementById("connBanner");
+  const text = document.getElementById("connBannerText");
+  text.textContent = msg || "通信エラーが発生しました。しばらくして再度お試しください";
+  banner.classList.add("show");
+  clearTimeout(flashConnError._tm);
+  flashConnError._tm = setTimeout(()=>{ if(navigator.onLine) banner.classList.remove("show"); }, 4000);
+}
+
+/* ---------- 初期タスクデータ (初回起動時にFirestoreへ書き込まれます。以後はFirestore側が正になります) ---------- */
+const INITIAL_DATA = {
+  asa: {
+    label: "朝管理",
+    sections: [
+      { name:"裏の畑", assignee:"辻", tasks:["フィールド科学演習 水やり"] },
+      { name:"1号", assignee:"諏訪田", tasks:["メロン、スイカ 萎れ確認","通路散水"] },
+      { name:"1号隣の畑", assignee:"橋本・中野真", tasks:["水やり(入口のヒマワリに注意)"] },
+      { name:"2号", assignee:"清水・新宮", tasks:["晴れの日は側窓を開ける","カボチャ、オクラ水やり(ジョウロで/杉山)","メロン底面給液(8トレイ、4箱使用)","奥のトマト培養液追加(青コンテナ ロックウール2/3程度・プラントボックス並々)","トマト エアー萎れ確認","モリンガ 土が乾いていたら水やり(辻)"] },
+      { name:"苗テラス", assignee:"", tasks:["4段すべての排水口のごみを取る","管理簿記入","除湿機右横のタンク水を捨て、再度電源を入れる"] },
+      { name:"苗テラス横貯蔵庫", assignee:"鈴木", tasks:["確認"] },
+      { name:"圃場実験室", assignee:"", tasks:["日曜日のみ EC・PHメーターの校正、内部液が減っていたら補充"] },
+      { name:"3号", assignee:"伊藤", tasks:["確認"] },
+      { name:"3号裏", assignee:"河野", tasks:["エダマメ水やり(ネットを被せているもの)"] },
+      { name:"4号", assignee:"", tasks:["片付け"] },
+      { name:"4号裏", assignee:"杉山", tasks:["エダマメ水やり(白プランター/河野)"] },
+      { name:"5号手前", assignee:"杉山", tasks:["通路散水","雨天時のみ側窓を閉める(晴れの日は忘れず開ける)","通路散水(雨天時不要)"] },
+      { name:"5号奥", assignee:"瀬川", tasks:["天窓内張りの開け閉めは不要"] },
+      { name:"わさび小屋", assignee:"鈴木", tasks:["通路散水(雨天時不要)","水耕、土耕 エアー、萎れ確認","水耕培養液(300Lタンク1/2単位)追加、ワグネルポット満タンに","水耕開花数調査(スプレッドシート参照/根元付近の花を見落とさない)","土耕水やり(排水口から水が出るまでたっぷり/植物体にかからないよう)"] },
+      { name:"6号", assignee:"中野真・橋本", tasks:["6号ファイル参照","通路散水(晴天のみ)","A列メロン 萎れタンク容量確認","C列全ての植物 萎れ確認・水追加(ワグネルいっぱいまで)"] },
+      { name:"7号", assignee:"中野翔（異常があれば連絡）", tasks:["萎れ確認","培養液残量確認(栽培ベッド下 全てのタンク)","給液装置の水漏れ確認","通路散水(地面が湿る程度、水たまり不可)"] },
+      { name:"8号手前", assignee:"滝口", tasks:["通路散水(雨天時不要)","オクラ培養液追加(ポットが半分浸かるくらい)"] },
+      { name:"8号奥", assignee:"", tasks:["通路散水(晴天のみ)","8号ファイル参照"] },
+      { name:"4階実験室", assignee:"", tasks:["日曜日のみPHメーターの校正、内部液が減っていたら補充","各月の最終日曜日のみPHメーターの内部液交換"] },
+      { name:"4階機器室", assignee:"", tasks:["おじぎ草水やり(スポイト一杯ずつ)"] },
+      { name:"下の畑", assignee:"杉山", tasks:["野菜たち水やり(全体的に満遍なくたっぷりと)","収穫"] }
+    ]
+  },
+  hiru: {
+    label: "昼管理",
+    sections: [
+      { name:"1号", assignee:"諏訪田", tasks:["メロン、スイカ 萎れ確認","通路散水"] },
+      { name:"2号", assignee:"清水・新宮", tasks:["トマトエアー、萎れ確認(青コンテナ)"] },
+      { name:"3号", assignee:"", tasks:["空芯菜(ワグネルポット)培養液追加(ロックウールが半分浸かるくらいで)","通路散水"] },
+      { name:"4号", assignee:"", tasks:["ハウス内の奥にあるトマト、底面給液","パイプの上の72穴セルトレイトマト苗 底面給液(水道水)"] },
+      { name:"4号奥", assignee:"", tasks:[] },
+      { name:"苗テラス", assignee:"", tasks:["培養液pH、EC測定(土曜のみ)","培養液残量確認、培養液作成(水位15cm以下のとき)(土曜のみ)"] },
+      { name:"苗テラス横貯蔵庫", assignee:"鈴木", tasks:[] },
+      { name:"5号奥", assignee:"瀬川", tasks:["イチゴ萎れ確認"] },
+      { name:"5号手前", assignee:"杉山", tasks:["雨天時のみ側窓を閉める(晴れの日は忘れず開ける)","通路散水(雨天時不要)"] },
+      { name:"わさび小屋", assignee:"鈴木", tasks:["通路散水(雨天時不要)","水耕、土耕 エアー、萎れ確認"] },
+      { name:"6号", assignee:"中野真・橋本", tasks:["通路散水(晴天のみ)","A列メロン 萎れタンク容量確認","C列全ての植物 萎れ確認"] },
+      { name:"7号", assignee:"中野翔", tasks:["萎れ確認","給液装置の水漏れ確認","通路散水(地面が湿る程度、水たまりができないように)雨天時不要"] },
+      { name:"8号手前", assignee:"滝口", tasks:[] },
+      { name:"8号奥", assignee:"", tasks:["通路散水(晴天のみ)"] },
+      { name:"下の畑", assignee:"杉山", tasks:["野菜たち水やり(全体的に満遍なくたっぷりと)"] },
+      { name:"4階実験室", assignee:"", tasks:[] },
+      { name:"一階機械室", assignee:"", tasks:[] }
+    ]
+  },
+  yugata: {
+    label: "夕管理",
+    sections: [
+      { name:"1号", assignee:"諏訪田", tasks:["給廃液のEC、質量計測","メロン、スイカ 萎れ確認","通路散水"] },
+      { name:"苗テラス横貯蔵庫", assignee:"鈴木", tasks:["確認"] },
+      { name:"苗テラス", assignee:"", tasks:["除湿機右横のタンク水を捨て、再度電源を入れる"] },
+      { name:"2号", assignee:"清水・新宮", tasks:["雨の日は側窓を閉める","エアー、萎れ確認(青コンテナ)","トマト培養液追加(発泡スチロール満タンに)","エダマメ 土が乾いていたら水やり(河野)"] },
+      { name:"3号", assignee:"伊藤", tasks:["空芯菜は自由に収穫OK(上から25cmくらいで切る)","通路散水"] },
+      { name:"4号", assignee:"", tasks:["確認"] },
+      { name:"4号裏", assignee:"杉山", tasks:["確認"] },
+      { name:"5号手前", assignee:"杉山", tasks:["雨天時のみ側窓を閉める(晴れの日は忘れず開ける)","通路散水(雨天時不要)"] },
+      { name:"わさび小屋", assignee:"鈴木", tasks:["通路散水(雨天時不要)","水耕、土耕 エアー、萎れ確認","土耕水やり(排水口から水が出るまで)"] },
+      { name:"5号奥", assignee:"瀬川", tasks:["EC測定、重量測定"] },
+      { name:"6号", assignee:"中野真・橋本", tasks:["A列メロン 区画5(1番奥) バケツの培養液を全て緑タンクに戻す","A列メロン 萎れタンク容量確認"] },
+      { name:"7号", assignee:"中野翔", tasks:["萎れ確認","培養液残量確認(栽培ベッド下 全てのタンク)","給液装置の水漏れ確認","通路散水(地面が湿る程度、水たまり不可)"] },
+      { name:"8号手前", assignee:"滝口", tasks:["確認"] },
+      { name:"8号奥", assignee:"", tasks:["通路散水(晴天のみ)"] },
+      { name:"圃場実験室", assignee:"", tasks:["確認"] },
+      { name:"1階機器室", assignee:"", tasks:["確認"] },
+      { name:"4階機器室", assignee:"", tasks:["確認"] },
+      { name:"4階実験室", assignee:"", tasks:["466室冷凍庫の扉、温度確認"] }
+    ]
+  }
+};
+
+/* ---------- utils ---------- */
+function pad(n){ return n<10 ? "0"+n : ""+n; }
+function genId(prefix){ return prefix+"_"+Date.now().toString(36)+Math.random().toString(36).slice(2,7); }
+function formatDateStr(d){ return d.getFullYear()+"-"+pad(d.getMonth()+1)+"-"+pad(d.getDate()); }
+function getTodayStr(){ return formatDateStr(new Date()); }
+function parseDateStr(dateStr){ return new Date(dateStr+"T00:00:00"); }
+function dowLabelForDate(d){
+  const days=["日","月","火","水","木","金","土"];
+  return (d.getMonth()+1)+"月"+d.getDate()+"日("+days[d.getDay()]+")";
+}
+function dowLabel(){ return dowLabelForDate(new Date()); }
+function shortDowLabel(dateStr){
+  const days=["日","月","火","水","木","金","土"];
+  const d = parseDateStr(dateStr);
+  return { md:(d.getMonth()+1)+"/"+d.getDate(), dow:days[d.getDay()] };
+}
+/* 直近N日分の日付文字列を新しい順(今日が先頭)で返す */
+function getLastNDays(n){
+  const arr=[];
+  const base=new Date();
+  for(let i=0;i<n;i++){
+    const dt=new Date(base);
+    dt.setDate(base.getDate()-i);
+    arr.push(formatDateStr(dt));
+  }
+  return arr;
+}
+function escapeHtml(str){
+  return String(str)
+    .replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;")
+    .replace(/"/g,"&quot;").replace(/'/g,"&#39;");
+}
+/* URLの自動リンク化: HTMLエスケープ後にURLをaタグへ置換 */
+function linkify(str){
+  const escaped = escapeHtml(str);
+  const urlRe = /(https?:\/\/[^\s<]+[^\s<.,;:!?)\]}'"])/g;
+  return escaped.replace(urlRe, (url)=>`<a href="${url}" class="task-link" target="_blank" rel="noopener noreferrer">${url}</a>`);
+}
+
+function withIds(rawSections){
+  return rawSections.map(s=>({
+    id: genId("s"),
+    name: s.name,
+    assignee: s.assignee||"",
+    tasks: s.tasks.map(t=>({ id: genId("t"), text: t, assignee:"" }))
+  }));
+}
+
+/* ---------- state ---------- */
+let currentTab = "asa";
+let structures = {};      // tab -> sections[]
+let todayChecked = {};    // 今日分のチェック(リアルタイム同期される実データ)
+let checkedMap = {};      // 現在画面に表示中のチェック(今日 or 過去の記録)
+let openSections = {};
+let todayStr = "";
+let viewDate = "";         // 現在表示中の日付(YYYY-MM-DD)
+let dateStats = {};        // 日付ごとの{done,total}(直近7日分)
+let undoStacks = { asa:[], hiru:[], yugata:[] };
+const UNDO_LIMIT = 20;
+
+let unsubStructure = null;
+let unsubChecks = null;
+
+function isHistoryMode(){ return viewDate !== todayStr; }
+
+function isPlaceholderStructure(sections){
+  if(!sections || sections.length===0) return true;
+  return sections.length===1
+    && sections[0].name==="新しい場所"
+    && sections[0].tasks.length===1
+    && sections[0].tasks[0].text==="ここにタスクを追加してください";
+}
+
+/* ---------- Firestore refs ---------- */
+function structureRef(tab){ return db.collection("structures").doc(tab); }
+function checksRef(tab, day){ return db.collection("checks").doc(tab+"_"+day); }
+function metaRef(){ return db.collection("meta").doc("flags"); }
+function backupsCol(){ return db.collection("backups"); }
+
+function countStats(tab, checks){
+  const sections = structures[tab] || [];
+  let total=0, done=0;
+  sections.forEach(s=>s.tasks.forEach(t=>{ total++; if(checks[t.id]) done++; }));
+  return { total, done };
+}
+
+/* ---------- 初回ロード（構成データの取得・移行処理）---------- */
+async function ensureStructureLoaded(tab){
+  if(!firebaseReady){
+    structures[tab] = structures[tab] || withIds(INITIAL_DATA[tab].sections);
+    return structures[tab];
+  }
+  try{
+    const snap = await structureRef(tab).get();
+    if(snap.exists && snap.data() && snap.data().sections){
+      let loaded = snap.data().sections;
+      if(isPlaceholderStructure(loaded)){
+        const reseeded = withIds(INITIAL_DATA[tab].sections);
+        structures[tab] = reseeded;
+        await saveStructure(tab);
+        return reseeded;
+      }
+      structures[tab] = loaded;
+      if(tab==="hiru"){ await applyHiruContentFixV2(); }
+      return structures[tab];
+    }
+  }catch(e){
+    flashConnError("データの取得に失敗しました。通信を確認してください");
+  }
+  const seeded = withIds(INITIAL_DATA[tab].sections);
+  structures[tab] = seeded;
+  await saveStructure(tab);
+  return seeded;
+}
+
+async function applyHiruContentFixV2(){
+  if(!firebaseReady) return;
+  try{
+    const flag = await metaRef().get();
+    if(flag.exists && flag.data() && flag.data().hiruContentFixV2) return;
+  }catch(e){ /* 未設定として続行 */ }
+
+  structures.hiru = withIds(INITIAL_DATA.hiru.sections);
+  await saveStructure("hiru");
+  try{ await metaRef().set({ hiruContentFixV2:true }, { merge:true }); }catch(e){}
+}
+
+/* ---------- 保存（自動保存） ---------- */
+async function saveStructure(tab){
+  if(!firebaseReady){ showConfigWarningOnce(); return; }
+  try{
+    await structureRef(tab).set({
+      sections: structures[tab],
+      updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+    });
+    scheduleAutoBackup(tab);
+  }catch(e){
+    flashConnError("保存に失敗しました。通信を確認してください");
+  }
+}
+async function saveChecks(tab){
+  if(!firebaseReady){ showConfigWarningOnce(); return; }
+  const stats = countStats(tab, todayChecked);
+  dateStats[todayStr] = stats;
+  try{
+    await checksRef(tab, todayStr).set({
+      data: todayChecked,
+      stats: stats,
+      updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+    });
+    scheduleAutoBackup(tab);
+  }catch(e){
+    flashConnError("保存に失敗しました。通信を確認してください");
+  }
+}
+function showConfigWarningOnce(){
+  if(showConfigWarningOnce._shown) return;
+  showConfigWarningOnce._shown = true;
+  showToast("Firebase未設定のため保存されません");
+}
+
+/* ---------- 直近7日間の記録の統計取得・古い記録の整理 ---------- */
+async function loadDateStats(tab){
+  dateStats = {};
+  if(!firebaseReady) return;
+  const days = getLastNDays(HISTORY_DAYS);
+  const oldest = days[days.length-1];
+  try{
+    const q = await db.collection("checks")
+      .where(firebase.firestore.FieldPath.documentId(), ">=", tab+"_"+oldest)
+      .where(firebase.firestore.FieldPath.documentId(), "<=", tab+"_"+todayStr)
+      .get();
+    q.docs.forEach(doc=>{
+      const day = doc.id.slice(tab.length+1);
+      const data = doc.data();
+      dateStats[day] = data.stats || countStats(tab, data.data || {});
+    });
+  }catch(e){ /* 履歴統計の取得失敗は致命的でないため無視 */ }
+}
+async function pruneOldChecks(tab){
+  if(!firebaseReady) return;
+  const days = getLastNDays(HISTORY_DAYS);
+  const oldestKept = days[days.length-1];
+  try{
+    const q = await db.collection("checks")
+      .where(firebase.firestore.FieldPath.documentId(), ">=", tab+"_")
+      .where(firebase.firestore.FieldPath.documentId(), "<", tab+"_"+oldestKept)
+      .get();
+    for(const d of q.docs){ await d.ref.delete(); }
+  }catch(e){ /* 整理失敗は無視 */ }
+}
+
+/* ---------- チェックの読み込み ---------- */
+async function loadTodayChecks(tab){
+  if(!firebaseReady){ todayChecked = {}; return; }
+  try{
+    const snap = await checksRef(tab, todayStr).get();
+    todayChecked = (snap.exists && snap.data() && snap.data().data) ? snap.data().data : {};
+  }catch(e){
+    todayChecked = {};
+    flashConnError("データの取得に失敗しました。通信を確認してください");
+  }
+}
+async function loadHistoryChecks(tab, day){
+  if(!firebaseReady) return {};
+  try{
+    const snap = await checksRef(tab, day).get();
+    return (snap.exists && snap.data() && snap.data().data) ? snap.data().data : {};
+  }catch(e){
+    flashConnError("データの取得に失敗しました。通信を確認してください");
+    return {};
+  }
+}
+
+/* ---------- リアルタイム同期（今日の分のみ） ---------- */
+function unsubscribeAll(){
+  if(unsubStructure){ unsubStructure(); unsubStructure=null; }
+  if(unsubChecks){ unsubChecks(); unsubChecks=null; }
+}
+function subscribeStructure(tab){
+  if(!firebaseReady) return;
+  unsubStructure = structureRef(tab).onSnapshot((snap)=>{
+    if(snap.metadata.hasPendingWrites) return; // 自分自身の書き込みは無視（二重再描画防止）
+    if(snap.exists && snap.data() && snap.data().sections){
+      structures[tab] = snap.data().sections;
+      if(tab===currentTab){ render(); updateUndoBtn(); }
+    }
+  }, (err)=>{
+    flashConnError("リアルタイム同期でエラーが発生しました");
+  });
+}
+function subscribeChecks(tab){
+  if(!firebaseReady) return;
+  unsubChecks = checksRef(tab, todayStr).onSnapshot((snap)=>{
+    if(snap.metadata.hasPendingWrites) return;
+    todayChecked = (snap.exists && snap.data() && snap.data().data) ? snap.data().data : {};
+    dateStats[todayStr] = (snap.exists && snap.data() && snap.data().stats) ? snap.data().stats : countStats(tab, todayChecked);
+    if(tab===currentTab && !isHistoryMode()){
+      checkedMap = todayChecked;
+      render();
+    }else if(tab===currentTab){
+      renderDateChips(); // 履歴閲覧中でも今日チップのバッジだけ更新
+    }
+  }, (err)=>{
+    flashConnError("リアルタイム同期でエラーが発生しました");
+  });
+}
+
+/* ---------- undo（端末ローカルのみ・今日の分のみ対象） ---------- */
+function snapshot(tab){
+  return {
+    structure: JSON.parse(JSON.stringify(structures[tab])),
+    checks: JSON.parse(JSON.stringify(todayChecked))
+  };
+}
+function pushUndo(tab){
+  const stack = undoStacks[tab];
+  stack.push(snapshot(tab));
+  if(stack.length>UNDO_LIMIT) stack.shift();
+  updateUndoBtn();
+}
+async function undo(){
+  if(isHistoryMode()) return;
+  const stack = undoStacks[currentTab];
+  if(stack.length===0) return;
+  const prev = stack.pop();
+  structures[currentTab] = prev.structure;
+  todayChecked = prev.checks;
+  checkedMap = todayChecked;
+  await saveStructure(currentTab);
+  await saveChecks(currentTab);
+  updateUndoBtn();
+  render();
+  showToast("元に戻しました");
+}
+function updateUndoBtn(){
+  document.getElementById("undoBtn").disabled = isHistoryMode() || undoStacks[currentTab].length===0;
+}
+
+function showToast(msg){
+  const t=document.getElementById("toast");
+  t.textContent=msg;
+  t.classList.add("show");
+  clearTimeout(showToast._tm);
+  showToast._tm=setTimeout(()=>t.classList.remove("show"),1700);
+}
+
+function checkSvg(){
+  return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="4 12 10 18 20 6"/></svg>';
+}
+function trashSvg(){
+  return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m2 0v14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2V6h12z"/></svg>';
+}
+function pencilSvg(){
+  return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>';
+}
+function upSvg(){
+  return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="18 15 12 9 6 15"/></svg>';
+}
+function downSvg(){
+  return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>';
+}
+
+/* ---------- タブ切り替え／初期ロード ---------- */
+async function loadTab(tab){
+  todayStr = getTodayStr();
+  viewDate = todayStr;
+  document.getElementById("datePill").textContent = dowLabel();
+  unsubscribeAll();
+  await ensureStructureLoaded(tab);
+  await pruneOldChecks(tab);
+  await loadTodayChecks(tab);
+  checkedMap = todayChecked;
+  await loadDateStats(tab);
+  subscribeStructure(tab);
+  subscribeChecks(tab);
+  updateUndoBtn();
+}
+
+/* 日付チップを選択して表示日を切り替える */
+async function selectDate(day){
+  if(day===viewDate) return;
+  viewDate = day;
+  if(day===todayStr){
+    checkedMap = todayChecked;
+  }else{
+    checkedMap = await loadHistoryChecks(currentTab, day);
+  }
+  updateUndoBtn();
+  render();
+}
+
+/* ---------- 日付選択チップの描画 ---------- */
+function renderDateChips(){
+  const wrap = document.getElementById("dateSelect");
+  wrap.innerHTML = "";
+  const days = getLastNDays(HISTORY_DAYS);
+  days.forEach(day=>{
+    const { md, dow } = shortDowLabel(day);
+    const stats = dateStats[day];
+    const chip = document.createElement("div");
+    chip.className = "date-chip"
+      + (day===viewDate ? " active" : "")
+      + (stats && stats.total>0 ? " has-data" : "");
+    chip.innerHTML = `
+      <div class="dow">${md}(${dow})</div>
+      ${stats ? `<div class="badge">${stats.done}/${stats.total}</div>` : `<div class="badge">-</div>`}
+      ${day===todayStr ? `<div class="today-tag">今日</div>` : ``}
+    `;
+    chip.addEventListener("click", ()=>selectDate(day));
+    wrap.appendChild(chip);
+  });
+}
+
+/* ---------- render ---------- */
+function render(){
+  renderDateChips();
+
+  const main = document.getElementById("main");
+  main.innerHTML = "";
+
+  if(isConfigPlaceholder()){
+    showConfigBanner();
+  }
+
+  const readOnly = isHistoryMode();
+
+  if(readOnly){
+    const { md, dow } = shortDowLabel(viewDate);
+    const banner = document.createElement("div");
+    banner.className = "history-banner";
+    banner.innerHTML = `<span>📖 ${md}(${dow}) の記録を表示中（編集はできません）</span><button id="backToTodayBtn">今日に戻る</button>`;
+    main.appendChild(banner);
+    banner.querySelector("#backToTodayBtn").addEventListener("click", ()=>selectDate(todayStr));
+  }
+
+  document.getElementById("undoBtn").style.display = readOnly ? "none" : "";
+  document.getElementById("backupBtn").style.display = readOnly ? "none" : "";
+
+  const sections = structures[currentTab] || [];
+  let totalTasks=0, doneTasks=0;
+
+  sections.forEach((section, idx)=>{
+    const sectionKey = currentTab+":"+section.id;
+    const isOpen = !!openSections[sectionKey];
+    let sectionDone=0;
+
+    const card=document.createElement("div");
+    card.className="section-card"+(isOpen?" open":"")+(readOnly?" readonly":"");
+
+    const head=document.createElement("div");
+    head.className="section-head";
+    head.innerHTML=`
+      <div class="titles">
+        <div class="section-title">${escapeHtml(section.name)}</div>
+        ${section.assignee?`<div class="section-assignee">担当: ${escapeHtml(section.assignee)}</div>`:``}
+      </div>
+      <div class="section-meta">
+        <span class="section-count" data-count></span>
+        ${(readOnly || !isOpen) ? `` : `
+          <button class="icon-btn" data-edit-assignee="${section.id}" title="担当を編集">${pencilSvg()}</button>
+          <button class="icon-btn" data-move-section="${section.id}|up" title="上へ移動" ${idx===0?"disabled":""}>${upSvg()}</button>
+          <button class="icon-btn" data-move-section="${section.id}|down" title="下へ移動" ${idx===sections.length-1?"disabled":""}>${downSvg()}</button>
+          <button class="icon-btn" data-del-section="${section.id}" title="この場所を削除">${trashSvg()}</button>
+        `}
+        <svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 6 15 12 9 18"/></svg>
+      </div>`;
+    head.addEventListener("click",(e)=>{
+      if(e.target.closest("button")) return;
+      openSections[sectionKey]=!openSections[sectionKey];
+      render();
+    });
+    card.appendChild(head);
+
+    const list=document.createElement("div");
+    list.className="task-list";
+
+    section.tasks.forEach((task)=>{
+      totalTasks++;
+      const isChecked=!!checkedMap[task.id];
+      if(isChecked){doneTasks++; sectionDone++;}
+      const row=document.createElement("div");
+      row.className="task-row";
+      row.innerHTML=`
+        <div class="check ${isChecked?"checked":""}${readOnly?" readonly":""}" data-id="${task.id}">${checkSvg()}</div>
+        <div class="task-main">
+          <div class="task-text ${isChecked?"checked":""}">${linkify(task.text)}</div>
+          ${task.assignee ? `<div class="task-assignee">👤 ${escapeHtml(task.assignee)}</div>` : ``}
+        </div>
+        ${readOnly ? `` : `<button class="icon-btn" data-edit-task-assignee="${section.id}|${task.id}" title="担当を編集">${pencilSvg()}</button>`}
+        ${readOnly ? `` : `<button class="task-remove" data-remove-task="${section.id}|${task.id}" title="削除">×</button>`}
+      `;
+      list.appendChild(row);
+    });
+
+    if(!readOnly){
+      const addRow=document.createElement("div");
+      addRow.className="add-row";
+      addRow.innerHTML=`
+        <input type="text" placeholder="タスクを追加" data-add-input="${section.id}">
+        <button data-add-btn="${section.id}">追加</button>
+      `;
+      list.appendChild(addRow);
+    }
+
+    card.appendChild(list);
+    if(section.tasks.length>0 && sectionDone===section.tasks.length) card.classList.add("all-done");
+    head.querySelector("[data-count]").textContent = section.tasks.length? `${sectionDone}/${section.tasks.length}`:"";
+    main.appendChild(card);
+  });
+
+  if(sections.length===0){
+    const note=document.createElement("div");
+    note.className="empty-note";
+    note.textContent="まだ場所がありません。下の「＋ 新しい場所を追加」から作成してください";
+    main.appendChild(note);
+  }
+
+  if(!readOnly){
+    // add-section card
+    const addSection=document.createElement("div");
+    addSection.className="add-section-card";
+    addSection.innerHTML=`
+      <button class="add-section-toggle" id="toggleAddSection">＋ 新しい場所を追加</button>
+      <div class="add-section-form" id="addSectionForm">
+        <input type="text" id="newSectionName" placeholder="場所の名前(例: 9号)">
+        <input type="text" id="newSectionAssignee" placeholder="担当(任意)">
+        <div class="btn-row">
+          <button class="primary" id="confirmAddSection">作成</button>
+          <button class="cancel" id="cancelAddSection">キャンセル</button>
+        </div>
+      </div>
+    `;
+    main.appendChild(addSection);
+
+    document.getElementById("toggleAddSection").addEventListener("click",()=>{
+      document.getElementById("addSectionForm").classList.toggle("show");
+    });
+    document.getElementById("cancelAddSection").addEventListener("click",()=>{
+      document.getElementById("addSectionForm").classList.remove("show");
+    });
+    document.getElementById("confirmAddSection").addEventListener("click", async ()=>{
+      const nameInput=document.getElementById("newSectionName");
+      const assigneeInput=document.getElementById("newSectionAssignee");
+      const name=nameInput.value.trim();
+      if(!name){ showToast("場所の名前を入力してください"); return; }
+      pushUndo(currentTab);
+      structures[currentTab].push({ id:genId("s"), name, assignee:assigneeInput.value.trim(), tasks:[] });
+      await saveStructure(currentTab);
+      openSections[currentTab+":"+structures[currentTab][structures[currentTab].length-1].id]=true;
+      render();
+      showToast("場所を追加しました");
+    });
+  }
+
+  // bindings
+  main.querySelectorAll("[data-id]").forEach(el=>{
+    el.addEventListener("click", async ()=>{
+      if(isHistoryMode()) return;
+      const id=el.getAttribute("data-id");
+      pushUndo(currentTab);
+      todayChecked[id]=!todayChecked[id];
+      checkedMap = todayChecked;
+      await saveChecks(currentTab);
+      render();
+    });
+  });
+  main.querySelectorAll("[data-edit-assignee]").forEach(el=>{
+    el.addEventListener("click", async (e)=>{
+      e.stopPropagation();
+      if(isHistoryMode()) return;
+      const sId=el.getAttribute("data-edit-assignee");
+      const sec=structures[currentTab].find(s=>s.id===sId);
+      const val = prompt(`「${sec.name}」の担当者名を入力してください(空にすると無記名になります)`, sec.assignee||"");
+      if(val===null) return;
+      pushUndo(currentTab);
+      sec.assignee = val.trim();
+      await saveStructure(currentTab);
+      render();
+    });
+  });
+  main.querySelectorAll("[data-edit-task-assignee]").forEach(el=>{
+    el.addEventListener("click", async (e)=>{
+      e.stopPropagation();
+      if(isHistoryMode()) return;
+      const [sId,tId]=el.getAttribute("data-edit-task-assignee").split("|");
+      const sec=structures[currentTab].find(s=>s.id===sId);
+      const task=sec.tasks.find(t=>t.id===tId);
+      const val = prompt("この項目の担当者名を入力してください(空にすると無記名になります)", task.assignee||"");
+      if(val===null) return;
+      pushUndo(currentTab);
+      task.assignee = val.trim();
+      await saveStructure(currentTab);
+      render();
+    });
+  });
+  main.querySelectorAll("[data-move-section]").forEach(el=>{
+    el.addEventListener("click", async (e)=>{
+      e.stopPropagation();
+      if(isHistoryMode()) return;
+      const [sId,dir]=el.getAttribute("data-move-section").split("|");
+      const arr=structures[currentTab];
+      const i=arr.findIndex(s=>s.id===sId);
+      const j = dir==="up" ? i-1 : i+1;
+      if(j<0 || j>=arr.length) return;
+      pushUndo(currentTab);
+      [arr[i],arr[j]]=[arr[j],arr[i]];
+      await saveStructure(currentTab);
+      render();
+    });
+  });
+  main.querySelectorAll("[data-remove-task]").forEach(el=>{
+    el.addEventListener("click", async (e)=>{
+      e.stopPropagation();
+      if(isHistoryMode()) return;
+      const [sId,tId]=el.getAttribute("data-remove-task").split("|");
+      pushUndo(currentTab);
+      const sec=structures[currentTab].find(s=>s.id===sId);
+      sec.tasks = sec.tasks.filter(t=>t.id!==tId);
+      delete todayChecked[tId];
+      checkedMap = todayChecked;
+      await saveStructure(currentTab);
+      await saveChecks(currentTab);
+      render();
+    });
+  });
+  main.querySelectorAll("[data-del-section]").forEach(el=>{
+    el.addEventListener("click", async (e)=>{
+      e.stopPropagation();
+      if(isHistoryMode()) return;
+      const sId=el.getAttribute("data-del-section");
+      const sec=structures[currentTab].find(s=>s.id===sId);
+      if(!confirm(`「${sec.name}」を削除します。よろしいですか？`)) return;
+      pushUndo(currentTab);
+      structures[currentTab] = structures[currentTab].filter(s=>s.id!==sId);
+      sec.tasks.forEach(t=>delete todayChecked[t.id]);
+      checkedMap = todayChecked;
+      await saveStructure(currentTab);
+      await saveChecks(currentTab);
+      render();
+      showToast("場所を削除しました");
+    });
+  });
+  main.querySelectorAll("[data-add-btn]").forEach(btn=>{
+    btn.addEventListener("click", async (e)=>{
+      e.stopPropagation();
+      if(isHistoryMode()) return;
+      const sId=btn.getAttribute("data-add-btn");
+      const input=main.querySelector(`[data-add-input="${sId}"]`);
+      const val=input.value.trim();
+      if(!val) return;
+      pushUndo(currentTab);
+      const sec=structures[currentTab].find(s=>s.id===sId);
+      sec.tasks.push({ id:genId("t"), text:val, assignee:"" });
+      await saveStructure(currentTab);
+      render();
+      showToast("タスクを追加しました");
+    });
+  });
+  main.querySelectorAll("[data-add-input]").forEach(input=>{
+    input.addEventListener("keydown", (e)=>{
+      if(e.key==="Enter"){
+        const sId = input.getAttribute("data-add-input");
+        main.querySelector(`[data-add-btn="${sId}"]`).click();
+      }
+    });
+  });
+
+  updateProgress(totalTasks,doneTasks);
+}
+
+function updateProgress(total,done){
+  document.getElementById("progressBig").textContent=`${done} / ${total}`;
+  const pct = total>0 ? Math.round(done/total*100) : 0;
+  document.getElementById("barFill").style.width=pct+"%";
+  document.getElementById("progressSmall").textContent =
+    isHistoryMode() ? "その日の完了タスク" :
+    (pct===100 && total>0 ? "今日の分、完了しました 🌿" : "完了したタスク");
+  drawSprout(pct);
+}
+function drawSprout(pct){
+  const svg=document.getElementById("sprout");
+  const stemH=10+(pct/100)*28;
+  const leafCount = pct>=100?4: pct>=66?3: pct>=33?2: pct>0?1:0;
+  const leafColor = pct>=100 ? "#c9e7a8" : "#8fc79a";
+  let leaves="";
+  const positions=[
+    {x:23,y:52-stemH*0.35,rot:-35},
+    {x:23,y:52-stemH*0.6,rot:35},
+    {x:23,y:52-stemH*0.85,rot:-30},
+    {x:23,y:52-stemH,rot:20}
+  ];
+  for(let i=0;i<leafCount;i++){
+    const p=positions[i];
+    leaves+=`<ellipse cx="${p.x}" cy="${p.y}" rx="9" ry="5" fill="${leafColor}" transform="rotate(${p.rot} ${p.x} ${p.y})" opacity="0.95"/>`;
+  }
+  svg.innerHTML=`
+    <line x1="23" y1="52" x2="23" y2="${52-stemH}" stroke="#a3785a" stroke-width="3" stroke-linecap="round"/>
+    ${leaves}
+    <circle cx="23" cy="${52-stemH}" r="3.2" fill="#e7c15a"/>
+  `;
+}
+
+/* ---------- backups ---------- */
+async function createBackup(silent){
+  if(isHistoryMode()) return;
+  if(!firebaseReady){ if(!silent) showConfigWarningOnce(); return; }
+  try{
+    await backupsCol().add({
+      tab: currentTab,
+      structure: structures[currentTab],
+      checks: todayChecked,
+      day: todayStr,
+      auto: !!silent,
+      createdAt: firebase.firestore.FieldValue.serverTimestamp()
+    });
+    if(!silent) showToast("保存しました");
+    await pruneBackups();
+  }catch(e){
+    if(!silent) flashConnError("保存に失敗しました。通信を確認してください");
+  }
+}
+async function pruneBackups(){
+  try{
+    const q = await backupsCol().where("tab","==",currentTab).orderBy("createdAt","desc").get();
+    const docs = q.docs;
+    if(docs.length>BACKUP_LIMIT){
+      const excess = docs.slice(BACKUP_LIMIT);
+      for(const d of excess){ await backupsCol().doc(d.id).delete(); }
+    }
+  }catch(e){ /* 一覧整理の失敗は致命的ではないため無視 */ }
+}
+
+/* ---------- 自動バックアップ(変更のたびに少し間をおいて保存) ---------- */
+const AUTO_BACKUP_DEBOUNCE_MS = 4000;
+const autoBackupTimers = {};
+function scheduleAutoBackup(tab){
+  clearTimeout(autoBackupTimers[tab]);
+  autoBackupTimers[tab] = setTimeout(()=>{
+    if(tab===currentTab) createBackup(true);
+  }, AUTO_BACKUP_DEBOUNCE_MS);
+}
+async function openRestoreModal(){
+  if(isHistoryMode()) return;
+  const listEl=document.getElementById("backupList");
+  listEl.innerHTML=`<div class="empty-note">読み込み中…</div>`;
+  document.getElementById("restoreModal").classList.add("show");
+  document.getElementById("restoreSub").textContent = INITIAL_DATA[currentTab].label + "の保存済みバックアップ一覧";
+  if(!firebaseReady){
+    listEl.innerHTML=`<div class="empty-note">Firebase未設定のためバックアップを利用できません</div>`;
+    return;
+  }
+  try{
+    const q = await backupsCol().where("tab","==",currentTab).orderBy("createdAt","desc").limit(BACKUP_LIMIT).get();
+    if(q.empty){
+      listEl.innerHTML=`<div class="empty-note">まだバックアップがありません</div>`;
+      return;
+    }
+    listEl.innerHTML="";
+    q.docs.forEach(doc=>{
+      const data = doc.data();
+      const ts = data.createdAt && data.createdAt.toDate ? data.createdAt.toDate() : new Date();
+      const label = `${ts.getMonth()+1}/${ts.getDate()} ${pad(ts.getHours())}:${pad(ts.getMinutes())} ${data.auto ? "(自動保存)" : "(手動保存)"}`;
+      const item=document.createElement("div");
+      item.className="backup-item";
+      item.innerHTML=`<div class="info">${label}<small>復元すると今の内容と入れ替わります</small></div><button data-restore-key="${doc.id}">復元</button>`;
+      listEl.appendChild(item);
+    });
+    listEl.querySelectorAll("[data-restore-key]").forEach(btn=>{
+      btn.addEventListener("click", async ()=>{
+        const key=btn.getAttribute("data-restore-key");
+        if(!confirm("このバックアップの内容で復元します。今の内容は上書きされます。よろしいですか？")) return;
+        try{
+          const doc = await backupsCol().doc(key).get();
+          const payload = doc.data();
+          pushUndo(currentTab);
+          structures[currentTab]=payload.structure;
+          todayChecked = (payload.day===todayStr) ? payload.checks : {};
+          checkedMap = todayChecked;
+          await saveStructure(currentTab);
+          await saveChecks(currentTab);
+          render();
+          document.getElementById("restoreModal").classList.remove("show");
+          showToast("復元しました");
+        }catch(e){
+          flashConnError("復元に失敗しました。通信を確認してください");
+        }
+      });
+    });
+  }catch(e){
+    listEl.innerHTML=`<div class="empty-note">読み込みに失敗しました</div>`;
+  }
+}
+
+/* ---------- events ---------- */
+document.getElementById("tabNav").addEventListener("click", async (e)=>{
+  const btn=e.target.closest("button[data-tab]");
+  if(!btn) return;
+  document.querySelectorAll("#tabNav button").forEach(b=>b.classList.remove("active"));
+  btn.classList.add("active");
+  currentTab=btn.getAttribute("data-tab");
+  await loadTab(currentTab);
+  render();
+});
+document.getElementById("undoBtn").addEventListener("click", undo);
+document.getElementById("backupBtn").addEventListener("click", ()=>createBackup(false));
+document.getElementById("restoreBtn").addEventListener("click", openRestoreModal);
+document.getElementById("closeModal").addEventListener("click", ()=>{
+  document.getElementById("restoreModal").classList.remove("show");
+});
+
+/* ---------- init ---------- */
+(async function init(){
+  initFirebase();
+  setupConnectionBanner();
+  await loadTab(currentTab);
+  render();
+})();
+</script>
+</body>
+</html>
