@@ -1201,7 +1201,7 @@ async function openRestoreModal(){
       });
     });
   }catch(e){
-    listEl.innerHTML=`<div class="empty-note">読み込みに失敗しました</div>`;
+    listEl.innerHTML=`<div class="empty-note">読み込みに失敗しました<br><small style="word-break:break-all;">${escapeHtml(e && e.message ? e.message : String(e))}</small></div>`;
   }
 }
 
