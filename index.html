@@ -12,7 +12,7 @@
 <meta name="theme-color" content="#26402f">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="栽培管理">
+<meta name="apple-mobile-web-app-title" content="圃場管理">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Zen+Maru+Gothic:wght@500;700;900&family=Noto+Sans+JP:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
@@ -1810,6 +1810,19 @@ async function loadAllCalendarForScore(){
     return map;
   }catch(e){ return calendarAssign; }
 }
+async function purgeDutyDataForFiscalYear(fy){
+  const collections = [preferencesCol(), calendarCol()];
+  for(const col of collections){
+    const snap = await col.get();
+    const deletions = [];
+    snap.forEach(doc=>{
+      if(fiscalYearForDate(doc.id) === fy){
+        deletions.push(col.doc(doc.id).delete());
+      }
+    });
+    await Promise.all(deletions);
+  }
+}
 async function saveCalendarDay(dateStr, people){
   calendarAssign[dateStr]=people;
   try{
@@ -1979,6 +1992,8 @@ async function renderScorePanel(el){
         <button class="lock-btn" id="adminLockBtn">${isAdmin?"🔓 管理者モード解除":"🔒 管理者パスワード入力"}</button>
         <button class="lock-btn" id="rosterBtn">🔒 名簿を管理</button>
         <button class="lock-btn" id="specialDateBtn">🔒 特例日を管理</button>
+        <button class="lock-btn" id="specialDateBtn">🔒 特例日を管理</button>
+        ${isAdmin ? `<button class="lock-btn" id="purgeOldDataBtn">🗑 過去データを削除</button>` : ``}
       </span>
     </div>
     <div class="me-bar">
@@ -2002,6 +2017,23 @@ async function renderScorePanel(el){
     if(!unlockAdmin()) return;
     openSpecialDateModal();
   });
+  const purgeBtn = document.getElementById("purgeOldDataBtn");
+if(purgeBtn){
+  purgeBtn.addEventListener("click", async ()=>{
+    const val = prompt("削除する年度を入力してください(例: 2024年度なら 2024)\n※その年度の希望表・当番カレンダーが完全に削除されます。元に戻せません。");
+    if(val===null) return;
+    const fy = parseInt(val,10);
+    if(isNaN(fy)){ showToast("数字で入力してください"); return; }
+    if(!confirm(`${fy}年度の希望表・当番カレンダーのデータを完全に削除します。この操作は元に戻せません。よろしいですか？`)) return;
+    try{
+      await purgeDutyDataForFiscalYear(fy);
+      showToast(`${fy}年度のデータを削除しました`);
+      renderScorePanel(el);
+    }catch(e){
+      showToast("削除に失敗しました");
+    }
+  });
+}
   document.getElementById("rosterBtn").addEventListener("click", ()=>{
     if(!unlockAdmin()) return;
     openRosterModal();
