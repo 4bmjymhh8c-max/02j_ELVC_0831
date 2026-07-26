@@ -1033,6 +1033,7 @@ function render(){
       <div class="section-meta">
         <span class="section-count" data-count></span>
         ${(readOnly || !isOpen) ? `` : `
+          <button class="icon-btn" data-toggle-section="${section.id}" title="まとめてチェック">${sectionDone===section.tasks.length && section.tasks.length>0 ? checkSvg() : "☑"}</button>
           <button class="icon-btn" data-edit-assignee="${section.id}" title="担当を編集">${pencilSvg()}</button>
           <button class="icon-btn" data-move-section="${section.id}|up" title="上へ移動" ${idx===0?"disabled":""}>${upSvg()}</button>
           <button class="icon-btn" data-move-section="${section.id}|down" title="下へ移動" ${idx===sections.length-1?"disabled":""}>${downSvg()}</button>
@@ -1182,6 +1183,21 @@ function render(){
       pushUndo(currentTab);
       [arr[i],arr[j]]=[arr[j],arr[i]];
       await saveStructure(currentTab);
+      render();
+    });
+  });
+    main.querySelectorAll("[data-toggle-section]").forEach(el=>{
+    el.addEventListener("click", async (e)=>{
+      e.stopPropagation();
+      if(isHistoryMode()) return;
+      const sId=el.getAttribute("data-toggle-section");
+      const sec=structures[currentTab].find(s=>s.id===sId);
+      if(sec.tasks.length===0) return;
+      pushUndo(currentTab);
+      const allDone = sec.tasks.every(t=>todayChecked[t.id]);
+      sec.tasks.forEach(t=>{ todayChecked[t.id] = !allDone; });
+      checkedMap = todayChecked;
+      await saveChecks(currentTab);
       render();
     });
   });
