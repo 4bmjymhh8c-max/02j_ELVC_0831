@@ -1445,7 +1445,7 @@ let myName   = localStorage.getItem("dutyMyName") || "";
 
 function unlockAdmin(){
   if(isAdmin) return true;
-  const pw = prompt("管理者パスワードを入力してください(スコアのポイント設定・特例日の追加・カレンダーへの当番入力に使えます)");
+  const pw = prompt("管理者パスワードを入力してください");
   if(pw===null) return false;
   if(pw===ADMIN_PASSWORD){
     isAdmin=true; localStorage.setItem("dutyIsAdmin","true");
@@ -2007,7 +2007,7 @@ async function renderScorePanel(el){
       <thead><tr><th>名前</th><th>回数</th><th>スコア</th></tr></thead>
       <tbody>${rowsHtml || `<tr><td colspan="3" class="empty-note">この期間の当番記録がありません</td></tr>`}</tbody>
     </table>
-    <div class="empty-note">基本は1日1ポイント。お盆や年末年始などはポイントアップします。集計は${fiscalStartMonth}月始まり〜翌年${endMonth}月終わりの年度ごとに記録されます</div>
+    <div class="empty-note">基本は1日1ポイント、お盆や年末年始などはポイントアップします。集計は${fiscalStartMonth}月始まり〜翌年${endMonth}月終わりの年度ごとに記録されます</div>
   `;
   document.getElementById("adminLockBtn").addEventListener("click", ()=>{
     if(isAdmin) lockAdmin(); else unlockAdmin();
