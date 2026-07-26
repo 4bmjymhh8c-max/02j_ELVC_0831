@@ -336,6 +336,15 @@
   .roster-count-badge{ flex:0 0 auto; font-size:11px; font-weight:700; color:var(--leaf-600); background:var(--leaf-100); border-radius:999px; padding:3px 9px; white-space:nowrap; }
   .cal-day-info{ font-size:12.5px; color:var(--ink-soft); margin-bottom:10px; line-height:1.6; }
   .cal-day-info b{ color:var(--soil-800); }
+  @media print{
+  body.printing-calendar header.top,
+  body.printing-calendar .toast,
+  body.printing-calendar .modal-overlay{ display:none !important; }
+  body.printing-calendar #dutyMain > *:not(.cal-month-block){ display:none !important; }
+  body.printing-calendar .cal-month-block{ display:none !important; }
+  body.printing-calendar .cal-month-block.print-target{ display:block !important; }
+  body.printing-calendar .cal-month-block.print-target [data-print-month]{ display:none !important; }
+}
 </style>
 </head>
 <body>
@@ -667,6 +676,13 @@ function escapeHtml(str){
     .replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;")
     .replace(/"/g,"&quot;").replace(/'/g,"&#39;");
 }
+function printCalendarMonth(idx){
+  document.body.classList.add("printing-calendar");
+  document.querySelectorAll(".cal-month-block").forEach(el=>el.classList.remove("print-target"));
+  document.getElementById("calMonthBlock"+idx).classList.add("print-target");
+  window.print();
+  setTimeout(()=>{ document.body.classList.remove("printing-calendar"); }, 500);
+}
 /* URLの自動リンク化: HTMLエスケープ後にURLをaタグへ置換 */
 function linkify(str){
   const escaped = escapeHtml(str);
@@ -972,7 +988,7 @@ async function selectDate(day){
 function renderDateChips(){
   const wrap = document.getElementById("dateSelect");
   wrap.innerHTML = "";
-  const days = getLastNDays(HISTORY_DAYS);
+  const days = getLastNDays(HISTORY_DAYS).filter(isDutyDate);
   days.forEach(day=>{
     const { md, dow } = shortDowLabel(day);
     const stats = dateStats[day];
@@ -1404,7 +1420,10 @@ document.getElementById("tabNav").addEventListener("click", async (e)=>{
 });
 document.getElementById("undoBtn").addEventListener("click", undo);
 document.getElementById("backupBtn").addEventListener("click", ()=>createBackup(false));
-document.getElementById("restoreBtn").addEventListener("click", openRestoreModal);
+document.getElementById("restoreBtn").addEventListener("click", ()=>{
+  if(!unlockAdmin()) return;
+  openRestoreModal();
+});
 document.getElementById("editModeBtn").addEventListener("click", ()=>{
   editMode = !editMode;
   render();
@@ -2097,9 +2116,10 @@ async function renderCalendarPanel(el){
     <button class="lock-btn" id="editorLockBtn">${isAdmin?"🔓 管理者モード解除":"🔒 管理者パスワード入力"}</button>
   </div>`;
 
-  months.forEach(m=>{
+    months.forEach((m, mIdx)=>{
     const { list } = monthDates(m.year, m.month);
-    html += `<div class="cal-month-title">${m.year}年 ${m.month+1}月</div>`;
+    html += `<div class="cal-month-block" id="calMonthBlock${mIdx}">`;
+    html += `<div class="cal-month-title">${m.year}年 ${m.month+1}月 <button class="lock-btn" data-print-month="${mIdx}">🖨 印刷</button></div>`;
     html += `<div class="cal-grid">`;
     ["日","月","火","水","木","金","土"].forEach(d=>{ html += `<div class="cal-dow">${d}</div>`; });
     const firstDow = new Date(m.year,m.month,1).getDay();
@@ -2114,13 +2134,20 @@ async function renderCalendarPanel(el){
         ${people.length ? `<div class="cal-people">${escapeHtml(people.join("・"))}</div>` : ``}
       </div>`;
     });
-    html += `</div>`;
+    html += `</div></div>`;
   });
 
   el.innerHTML = html;
   document.getElementById("editorLockBtn").addEventListener("click", ()=>{
     if(isAdmin) lockAdmin(); else unlockAdmin();
   });
+  el.querySelectorAll("[data-print-month]").forEach(btn=>{
+  btn.addEventListener("click", (e)=>{
+    e.stopPropagation();
+    printCalendarMonth(btn.getAttribute("data-print-month"));
+  });
+});
+
   el.querySelectorAll("[data-cal-date]").forEach(cell=>{
     cell.addEventListener("click", ()=>openCalendarDayModal(cell.getAttribute("data-cal-date")));
   });
