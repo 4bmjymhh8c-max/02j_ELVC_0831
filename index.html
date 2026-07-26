@@ -2131,7 +2131,7 @@ async function openCalendarDayModal(ds){
     bodyEl.innerHTML = infoHtml + `<div class="empty-note">読み込み中…</div>`;
     document.getElementById("calendarDayModal").classList.add("show");
 
-        // その月のこれまでの当番回数を人ごとに集計(割り振りの参考用)
+    // その月のこれまでの当番回数を人ごとに集計(割り振りの参考用)
     const monthDs = monthDates(d.getFullYear(), d.getMonth()).list;
     await loadCalendarRange(monthDs);
     const counts = {};
@@ -2139,8 +2139,8 @@ async function openCalendarDayModal(ds){
     monthDs.forEach(otherDs=>{
       (calendarAssign[otherDs]||[]).forEach(name=>{ counts[name]=(counts[name]||0)+1; });
     });
-    
-  // この日を希望している人・すでに割り当て済みの人だけを候補にする
+
+    // この日を希望している人・すでに割り当て済みの人だけを候補にする
     const pickList = roster.filter(n=>wanterNames.includes(n) || assigned.includes(n));
 
     infoHtml += pickList.length ? pickList.map(n=>`
@@ -2151,17 +2151,9 @@ async function openCalendarDayModal(ds){
       </div>`).join("") : `<div class="empty-note">この日を希望している人がいません</div>`;
     infoHtml += `<button id="calDaySave" style="width:100%; margin-top:12px; border:none; background:var(--leaf-600); color:#fff; border-radius:10px; padding:11px; font-weight:700; cursor:pointer;">この内容で保存</button>`;
 
-    infoHtml += roster.map(n=>`
-      <div class="roster-check-row">
-        <input type="checkbox" id="calpick-${n}" ${assigned.includes(n)?"checked":""}>
-        <label for="calpick-${n}">${escapeHtml(n)}${wanterNames.includes(n)?" (希望あり)":""}</label>
-        <span class="roster-count-badge">${counts[n]||0}回</span>
-      </div>`).join("");
-    infoHtml += `<button id="calDaySave" style="width:100%; margin-top:12px; border:none; background:var(--leaf-600); color:#fff; border-radius:10px; padding:11px; font-weight:700; cursor:pointer;">この内容で保存</button>`;
-
     bodyEl.innerHTML = infoHtml;
     document.getElementById("calDaySave").addEventListener("click", async ()=>{
-      const picked = roster.filter(n=>document.getElementById(`calpick-${n}`).checked);
+      const picked = pickList.filter(n=>document.getElementById(`calpick-${n}`).checked);
       await saveCalendarDay(ds, picked);
       document.getElementById("calendarDayModal").classList.remove("show");
       renderDutyPanel();
@@ -2172,6 +2164,17 @@ async function openCalendarDayModal(ds){
     document.getElementById("calendarDayModal").classList.add("show");
   }
 }
+document.getElementById("closeCalDayModal").addEventListener("click", ()=>{
+  document.getElementById("calendarDayModal").classList.remove("show");
+});
+
+/* ---- モード / サブタブ切り替え ---- */
+document.getElementById("modeSwitch").addEventListener("click", async (e)=>{
+  const btn = e.target.closest("button[data-mode]");
+  if(!btn) return;
+  document.querySelectorAll("#modeSwitch button").forEach(b=>b.classList.remove("active"));
+  btn.classList.add("active");
+  const mode = btn.getAttribute("data-mode");
   const isDuty = mode==="duty";
   document.getElementById("checkModeHeader").style.display = isDuty ? "none" : "";
   document.getElementById("dutyModeHeader").style.display = isDuty ? "" : "none";
@@ -2197,5 +2200,4 @@ document.getElementById("dutySubNav").addEventListener("click", async (e)=>{
   render();
 })();
 </script>
-</body>
 </html>
