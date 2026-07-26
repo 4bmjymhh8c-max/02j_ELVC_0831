@@ -308,7 +308,6 @@
   .score-table th, .score-table td{ padding:10px 12px; font-size:13px; text-align:left; border-bottom:1px solid var(--line); }
   .score-table th{ background:#eef0e5; color:var(--ink-soft); font-weight:700; font-size:11.5px; }
   .score-table tr:last-child td{ border-bottom:none; }
-  .score-rank{ display:inline-block; width:22px; text-align:center; color:var(--bark); font-weight:700; }
 
   .cal-month-title{ font-family:"Zen Maru Gothic",sans-serif; font-weight:800; color:var(--soil-800); font-size:15px; margin:14px 0 8px; }
   .cal-grid{ display:grid; grid-template-columns:repeat(7,1fr); gap:5px; }
@@ -1390,17 +1389,15 @@ document.getElementById("closeModal").addEventListener("click", ()=>{
    当番管理モジュール (希望表 / スコア / カレンダー)
    ========================================================================= */
 
-/* ---- 権限まわり(簡易パスワード。必要に応じて下の2つの値を書き換えてください) ---- */
-const ADMIN_PASSWORD  = "attack_the_Dpoint";   // スコアのポイント設定・特例日の追加に必要
-const EDITOR_PASSWORD = "toubanjan";  // カレンダーへの当番入力に必要
+/* ---- 権限まわり(簡易パスワード。必要に応じて下の値を書き換えてください) ---- */
+const ADMIN_PASSWORD  = "attack_the_Dpoint";   // スコアのポイント設定・特例日の追加・カレンダーへの当番入力に共通で使用
 
 let isAdmin  = localStorage.getItem("dutyIsAdmin")==="true";
-let isEditor = localStorage.getItem("dutyIsEditor")==="true";
 let myName   = localStorage.getItem("dutyMyName") || "";
 
 function unlockAdmin(){
   if(isAdmin) return true;
-  const pw = prompt("管理者パスワードを入力してください(スコアのポイント設定・特例日の追加に使えます)");
+  const pw = prompt("管理者パスワードを入力してください(スコアのポイント設定・特例日の追加・カレンダーへの当番入力に使えます)");
   if(pw===null) return false;
   if(pw===ADMIN_PASSWORD){
     isAdmin=true; localStorage.setItem("dutyIsAdmin","true");
@@ -1411,20 +1408,7 @@ function unlockAdmin(){
   showToast("パスワードが違います");
   return false;
 }
-function unlockEditor(){
-  if(isEditor) return true;
-  const pw = prompt("編集者パスワードを入力してください(カレンダーへの当番入力に使えます)");
-  if(pw===null) return false;
-  if(pw===EDITOR_PASSWORD){
-    isEditor=true; localStorage.setItem("dutyIsEditor","true");
-    showToast("編集者モードを解除しました");
-    return true;
-  }
-  showToast("パスワードが違います");
-  return false;
-}
 function lockAdmin(){ isAdmin=false; localStorage.removeItem("dutyIsAdmin"); showToast("管理者モードをロックしました"); renderDutyPanel(); }
-function lockEditor(){ isEditor=false; localStorage.removeItem("dutyIsEditor"); showToast("編集者モードをロックしました"); renderDutyPanel(); }
 
 /* ---- 名簿(ロースター) ---- */
 const ROSTER_DEFAULT = ["木下","清水","杉山","鈴木","諏訪田","瀬川","中野翔","伊藤","中野真","辻","増田","藤井","河野","新宮","杉本","滝口","中村","橋本","和田"];
@@ -1930,9 +1914,8 @@ async function renderScorePanel(el){
     });
   });
   const sorted = Object.keys(scores).sort((a,b)=>scores[b]-scores[a]);
-  const rowsHtml = sorted.map((name,i)=>`
+  const rowsHtml = sorted.map((name)=>`
     <tr>
-      <td><span class="score-rank">${i+1}</span></td>
       <td>${escapeHtml(name)}</td>
       <td>${counts[name]}回</td>
       <td><b>${scores[name]}</b>pt</td>
@@ -1945,6 +1928,7 @@ async function renderScorePanel(el){
     <div class="duty-section-title">
       スコア
       <span>
+        <button class="lock-btn" id="adminLockBtn">${isAdmin?"🔓 管理者モード解除":"🔒 管理者パスワード入力"}</button>
         <button class="lock-btn" id="rosterBtn">🔒 名簿を管理</button>
         <button class="lock-btn" id="specialDateBtn">🔒 特例日を管理</button>
       </span>
@@ -1958,11 +1942,14 @@ async function renderScorePanel(el){
       <button id="fiscalEditBtn" class="lock-btn">🔒 開始月を変更</button>
     </div>
     <table class="score-table">
-      <thead><tr><th>順位</th><th>名前</th><th>回数</th><th>スコア</th></tr></thead>
-      <tbody>${rowsHtml || `<tr><td colspan="4" class="empty-note">この期間の当番記録がありません</td></tr>`}</tbody>
+      <thead><tr><th>名前</th><th>回数</th><th>スコア</th></tr></thead>
+      <tbody>${rowsHtml || `<tr><td colspan="3" class="empty-note">この期間の当番記録がありません</td></tr>`}</tbody>
     </table>
     <div class="empty-note">基本は1日1ポイント。お盆や年末年始などはポイントアップします。集計は${fiscalStartMonth}月始まり〜翌年${endMonth}月終わりの年度ごとに記録されます</div>
   `;
+  document.getElementById("adminLockBtn").addEventListener("click", ()=>{
+    if(isAdmin) lockAdmin(); else unlockAdmin();
+  });
   document.getElementById("specialDateBtn").addEventListener("click", ()=>{
     if(!unlockAdmin()) return;
     openSpecialDateModal();
@@ -2078,7 +2065,7 @@ async function renderCalendarPanel(el){
   await loadPreferencesRange(allDates.filter(isDutyDate));
 
   let html = `<div class="duty-section-title">当番カレンダー
-    <button class="lock-btn" id="editorLockBtn">${isEditor?"🔓 編集者モード解除":"🔒 編集者パスワード入力"}</button>
+    <button class="lock-btn" id="editorLockBtn">${isAdmin?"🔓 管理者モード解除":"🔒 管理者パスワード入力"}</button>
   </div>`;
 
   months.forEach(m=>{
@@ -2103,7 +2090,7 @@ async function renderCalendarPanel(el){
 
   el.innerHTML = html;
   document.getElementById("editorLockBtn").addEventListener("click", ()=>{
-    if(isEditor) lockEditor(); else { if(unlockEditor()) renderDutyPanel(); }
+    if(isAdmin) lockAdmin(); else unlockAdmin();
   });
   el.querySelectorAll("[data-cal-date]").forEach(cell=>{
     cell.addEventListener("click", ()=>openCalendarDayModal(cell.getAttribute("data-cal-date")));
@@ -2127,7 +2114,7 @@ async function openCalendarDayModal(ds){
     希望している人: ${wanterNames.length ? escapeHtml(wanterNames.join("・")) : "なし"}
   </div>`;
 
-  if(isEditor){
+  if(isAdmin){
     bodyEl.innerHTML = infoHtml + `<div class="empty-note">読み込み中…</div>`;
     document.getElementById("calendarDayModal").classList.add("show");
 
@@ -2159,7 +2146,7 @@ async function openCalendarDayModal(ds){
       renderDutyPanel();
     });
   }else{
-    infoHtml += `<div class="empty-note">当番を編集するには編集者パスワードが必要です</div>`;
+    infoHtml += `<div class="empty-note">当番を編集するには管理者パスワードが必要です</div>`;
     bodyEl.innerHTML = infoHtml;
     document.getElementById("calendarDayModal").classList.add("show");
   }
