@@ -1518,7 +1518,7 @@ async function applySpecialDatesSnapshot(targetMap){
     Object.keys(targetMap).forEach(ds=>{ ops.push(specialDatesCol().doc(ds).set(targetMap[ds])); });
     await Promise.all(ops);
     specialDates = JSON.parse(JSON.stringify(targetMap));
-  }catch(e){ showToast("特別な日の復元に失敗しました"); }
+  }catch(e){ showToast("特例日の復元に失敗しました"); }
 }
 async function undoDuty(){
   if(dutyUndoStack.length===0) return;
@@ -1581,12 +1581,12 @@ async function openDutyRestoreModal(){
       const label = `${ts.getMonth()+1}/${ts.getDate()} ${pad(ts.getHours())}:${pad(ts.getMinutes())} ${data.auto?"(自動保存)":"(手動保存)"}`;
       const item = document.createElement("div");
       item.className = "backup-item";
-      item.innerHTML = `<div class="info">${label}<small>復元すると名簿・特別な日・年度設定が入れ替わります</small></div><button data-duty-restore="${doc.id}">復元</button>`;
+      item.innerHTML = `<div class="info">${label}<small>復元すると名簿・特例日・年度設定が入れ替わります</small></div><button data-duty-restore="${doc.id}">復元</button>`;
       listEl.appendChild(item);
     });
     listEl.querySelectorAll("[data-duty-restore]").forEach(btn=>{
       btn.addEventListener("click", async ()=>{
-        if(!confirm("このバックアップの内容で復元します。今の名簿・特別な日・年度設定は上書きされます。よろしいですか？")) return;
+        if(!confirm("このバックアップの内容で復元します。今の名簿・特例日・年度設定は上書きされます。よろしいですか？")) return;
         try{
           const snap = await dutyBackupsCol().doc(btn.getAttribute("data-duty-restore")).get();
           const data = snap.data();
