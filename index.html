@@ -372,6 +372,7 @@
       <button class="foot-btn" id="undoBtn" disabled>↩ 取消</button>
       <button class="foot-btn" id="backupBtn">💾 保存</button>
       <button class="foot-btn" id="restoreBtn">📂 復元</button>
+      <button class="foot-btn" id="editModeBtn">✏️ 編集</button>
     </div>
   </div>
 
@@ -385,6 +386,7 @@
       <button class="foot-btn" id="dutyUndoBtn" disabled>↩ 取消</button>
       <button class="foot-btn" id="dutyBackupBtn">💾 保存</button>
       <button class="foot-btn" id="dutyRestoreBtn">📂 復元</button>
+      <button class="foot-btn" id="editModeBtn">✏️ 編集</button>
     </div>
   </div>
 
@@ -687,6 +689,7 @@ let structures = {};      // tab -> sections[]
 let todayChecked = {};    // 今日分のチェック(リアルタイム同期される実データ)
 let checkedMap = {};      // 現在画面に表示中のチェック(今日 or 過去の記録)
 let openSections = {};
+let editMode = false;
 let todayStr = "";
 let viewDate = "";         // 現在表示中の日付(YYYY-MM-DD)
 let dateStats = {};        // 日付ごとの{done,total}(直近7日分)
@@ -1011,6 +1014,9 @@ function render(){
 
   document.getElementById("undoBtn").style.display = readOnly ? "none" : "";
   document.getElementById("backupBtn").style.display = readOnly ? "none" : "";
+  document.getElementById("backupBtn").style.display = readOnly ? "none" : "";
+  document.getElementById("editModeBtn").classList.toggle("danger", editMode);
+  document.getElementById("editModeBtn").textContent = editMode ? "✅ 編集を終了" : "✏️ 編集";
 
   const sections = structures[currentTab] || [];
   let totalTasks=0, doneTasks=0;
@@ -1032,13 +1038,14 @@ function render(){
       </div>
       <div class="section-meta">
         <span class="section-count" data-count></span>
-        ${(readOnly || !isOpen) ? `` : `
-          <button class="icon-btn" data-toggle-section="${section.id}" title="まとめてチェック" style="font-size:18px;">☑</button>
+        ${(readOnly || !isOpen) ? `` : `<button class="icon-btn" data-toggle-section="${section.id}" title="まとめてチェック" style="font-size:18px;">☑</button>`}
+        ${(readOnly || !isOpen || !editMode) ? `` : `
           <button class="icon-btn" data-edit-assignee="${section.id}" title="担当を編集">${pencilSvg()}</button>
           <button class="icon-btn" data-move-section="${section.id}|up" title="上へ移動" ${idx===0?"disabled":""}>${upSvg()}</button>
           <button class="icon-btn" data-move-section="${section.id}|down" title="下へ移動" ${idx===sections.length-1?"disabled":""}>${downSvg()}</button>
           <button class="icon-btn" data-del-section="${section.id}" title="この場所を削除">${trashSvg()}</button>
         `}
+
         <svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 6 15 12 9 18"/></svg>
       </div>`;
     head.addEventListener("click",(e)=>{
@@ -1063,13 +1070,13 @@ function render(){
           <div class="task-text ${isChecked?"checked":""}">${linkify(task.text)}</div>
           ${task.assignee ? `<div class="task-assignee">👤 ${escapeHtml(task.assignee)}</div>` : ``}
         </div>
-        ${readOnly ? `` : `<button class="icon-btn" data-edit-task-assignee="${section.id}|${task.id}" title="担当を編集">${pencilSvg()}</button>`}
-        ${readOnly ? `` : `<button class="task-remove" data-remove-task="${section.id}|${task.id}" title="削除">×</button>`}
+        ${(readOnly || !editMode) ? `` : `<button class="icon-btn" data-edit-task-assignee="${section.id}|${task.id}" title="担当を編集">${pencilSvg()}</button>`}
+        ${(readOnly || !editMode) ? `` : `<button class="task-remove" data-remove-task="${section.id}|${task.id}" title="削除">×</button>`}
       `;
       list.appendChild(row);
     });
 
-    if(!readOnly){
+    if(!readOnly && editMode){
       const addRow=document.createElement("div");
       addRow.className="add-row";
       addRow.innerHTML=`
@@ -1093,7 +1100,7 @@ function render(){
     main.appendChild(note);
   }
 
-  if(!readOnly){
+  if(!readOnly && editMode){
     // add-section card
     const addSection=document.createElement("div");
     addSection.className="add-section-card";
@@ -1398,6 +1405,11 @@ document.getElementById("tabNav").addEventListener("click", async (e)=>{
 document.getElementById("undoBtn").addEventListener("click", undo);
 document.getElementById("backupBtn").addEventListener("click", ()=>createBackup(false));
 document.getElementById("restoreBtn").addEventListener("click", openRestoreModal);
+document.getElementById("editModeBtn").addEventListener("click", ()=>{
+  editMode = !editMode;
+  render();
+});
+
 document.getElementById("closeModal").addEventListener("click", ()=>{
   document.getElementById("restoreModal").classList.remove("show");
 });
