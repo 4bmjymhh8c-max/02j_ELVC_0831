@@ -253,6 +253,79 @@
     padding:12px 14px; margin:0 0 12px; font-size:12.5px; line-height:1.6;
   }
   .config-banner code{background:#fff; border:1px solid #f0c98a; border-radius:6px; padding:1px 5px; font-size:11.5px;}
+
+  /* ---- モード切り替え / 当番管理 ---- */
+  .mode-switch{ display:flex; gap:6px; margin-bottom:2px; }
+  .mode-switch button{
+    flex:1; border:1px solid rgba(255,255,255,.2); background:rgba(255,255,255,.05);
+    color:#cfe0d2; font-family:"Zen Maru Gothic",sans-serif; font-weight:700; font-size:12.5px;
+    padding:7px 6px; border-radius:10px; cursor:pointer;
+  }
+  .mode-switch button.active{ background:#fff; color:var(--soil-800); }
+
+  .duty-section-title{ font-family:"Zen Maru Gothic",sans-serif; font-weight:700; color:var(--soil-800); font-size:15px; margin:2px 0 10px; display:flex; align-items:center; justify-content:space-between; gap:8px;}
+  .duty-section-title .lock-btn{ font-size:11.5px; font-weight:600; color:var(--bark); background:var(--leaf-100); border:none; border-radius:999px; padding:5px 11px; cursor:pointer; white-space:nowrap; }
+
+  .me-bar{ display:flex; align-items:center; gap:8px; background:var(--card); border:1px solid var(--line); border-radius:12px; padding:9px 12px; margin-bottom:12px; font-size:12.5px; color:var(--ink-soft); }
+  .me-bar b{ color:var(--soil-800); font-family:"Zen Maru Gothic",sans-serif; }
+  .me-bar button{ margin-left:auto; border:none; background:var(--leaf-100); color:var(--leaf-600); border-radius:999px; padding:6px 12px; font-size:12px; font-weight:600; cursor:pointer; }
+
+  .name-chip{
+    display:inline-flex; align-items:center; border:1px solid var(--line); background:#fff; border-radius:999px;
+    padding:9px 14px; font-size:14px; margin:0 6px 8px 0; cursor:pointer; font-family:"Zen Maru Gothic",sans-serif; font-weight:700; color:var(--soil-800);
+  }
+  .name-chip:active{ background:var(--leaf-100); }
+
+  .pref-month-block{ margin-bottom:18px; }
+  .pref-month-head{ display:flex; align-items:baseline; justify-content:space-between; gap:8px; margin:2px 0 9px; }
+  .pref-month-head .name{ font-family:"Zen Maru Gothic",sans-serif; font-weight:800; font-size:15px; color:var(--soil-800); display:flex; align-items:center; gap:7px; }
+  .pref-month-tag{ font-size:10.5px; font-weight:700; border-radius:999px; padding:3px 9px; white-space:nowrap; }
+  .pref-month-tag.next{ background:var(--leaf-600); color:#fff; }
+  .pref-month-tag.this{ background:var(--leaf-100); color:var(--ink-soft); }
+  .pref-month-sub{ font-size:11px; color:var(--ink-soft); margin-top:1px; }
+  .pref-row{ display:flex; align-items:center; gap:10px; background:var(--card); border:1px solid var(--line); border-radius:14px; padding:11px 13px; margin-bottom:9px; }
+  .pref-row.is-past{ background:#f2f0e6; border-color:#e6e1d0; opacity:.68; }
+  .pref-row.is-past .pref-day, .pref-row.is-past .pref-label{ color:var(--ink-soft); }
+  .pref-row.is-today{ border-color:var(--leaf-500); background:#f1f8ef; box-shadow:0 0 0 1px var(--leaf-500) inset; }
+  .pref-date{ flex:0 0 auto; width:64px; text-align:center; }
+  .pref-day{ font-family:"Zen Maru Gothic",sans-serif; font-weight:800; font-size:14px; color:var(--soil-800); }
+  .pref-today-dot{ display:inline-block; font-size:9px; font-weight:700; color:var(--leaf-600); background:#dff0dc; border-radius:999px; padding:1px 6px; margin-top:2px; }
+  .pref-label{ font-size:10.5px; color:var(--bark); margin-top:2px; }
+  .pref-wanters{ flex:1; min-width:0; font-size:12px; color:var(--ink-soft); line-height:1.5; }
+  .pref-toggle{ flex:0 0 auto; border:1px solid var(--leaf-500); background:#fff; color:var(--leaf-600); border-radius:999px; padding:8px 12px; font-size:12px; font-weight:700; cursor:pointer; white-space:nowrap; }
+  .pref-toggle.mine{ background:var(--leaf-600); color:#fff; }
+  .pref-readonly-mark{ flex:0 0 auto; font-size:11px; color:var(--ink-soft); white-space:nowrap; }
+
+  .score-table{ width:100%; border-collapse:collapse; background:var(--card); border:1px solid var(--line); border-radius:14px; overflow:hidden; }
+  .score-table th, .score-table td{ padding:10px 12px; font-size:13px; text-align:left; border-bottom:1px solid var(--line); }
+  .score-table th{ background:#eef0e5; color:var(--ink-soft); font-weight:700; font-size:11.5px; }
+  .score-table tr:last-child td{ border-bottom:none; }
+  .score-rank{ display:inline-block; width:22px; text-align:center; color:var(--bark); font-weight:700; }
+
+  .cal-month-title{ font-family:"Zen Maru Gothic",sans-serif; font-weight:800; color:var(--soil-800); font-size:15px; margin:14px 0 8px; }
+  .cal-grid{ display:grid; grid-template-columns:repeat(7,1fr); gap:5px; }
+  .cal-dow{ text-align:center; font-size:10.5px; color:var(--ink-soft); font-weight:700; padding-bottom:2px; }
+  .cal-cell{
+    aspect-ratio:1/1; border-radius:10px; border:1px solid var(--line); background:var(--card);
+    display:flex; flex-direction:column; align-items:center; justify-content:flex-start; padding:4px 2px;
+    cursor:pointer; overflow:hidden; min-height:52px;
+  }
+  .cal-cell.empty{ background:transparent; border:none; cursor:default; }
+  .cal-cell.duty{ background:#fdf3e6; border-color:#eccf9d; }
+  .cal-cell .cal-num{ font-family:"Zen Maru Gothic",sans-serif; font-weight:800; font-size:12.5px; color:var(--soil-800); }
+  .cal-cell.duty .cal-num{ color:var(--alert); }
+  .cal-cell .cal-label{ font-size:8px; color:var(--bark); line-height:1.1; margin-top:1px; text-align:center; }
+  .cal-cell .cal-people{ font-size:8.5px; color:var(--leaf-600); font-weight:700; line-height:1.2; margin-top:2px; text-align:center; word-break:break-all; }
+
+  .special-date-row{ display:flex; align-items:center; gap:8px; padding:9px 2px; border-bottom:1px solid var(--line); font-size:12.5px; }
+  .special-date-row .sd-date{ font-weight:700; color:var(--soil-800); width:78px; flex:0 0 auto; }
+  .special-date-row .sd-label{ flex:1; color:var(--ink-soft); min-width:0; }
+  .special-date-row input[type=number]{ width:48px; border:1px solid var(--line); border-radius:8px; padding:5px; font-size:12.5px; text-align:center; }
+  .special-date-row button{ border:none; background:none; color:#c9bfae; font-size:16px; cursor:pointer; }
+  .roster-check-row{ display:flex; align-items:center; gap:9px; padding:8px 2px; border-bottom:1px solid var(--line); font-size:13.5px; }
+  .roster-check-row input{ width:19px; height:19px; }
+  .cal-day-info{ font-size:12.5px; color:var(--ink-soft); margin-bottom:10px; line-height:1.6; }
+  .cal-day-info b{ color:var(--soil-800); }
 </style>
 </head>
 <body>
@@ -262,33 +335,54 @@
     <div class="brand">栽培管理リスト</div>
     <div class="date-pill" id="datePill">–</div>
   </div>
-  <nav class="tabs" id="tabNav">
-    <button data-tab="asa" class="active">朝管理</button>
-    <button data-tab="hiru">昼管理</button>
-    <button data-tab="yugata">夕管理</button>
-  </nav>
+  <div class="mode-switch" id="modeSwitch">
+    <button data-mode="check" class="active">✅ 日々のチェック</button>
+    <button data-mode="duty">📅 当番管理</button>
+  </div>
 
-  <div class="date-select" id="dateSelect"></div>
+  <div id="checkModeHeader">
+    <nav class="tabs" id="tabNav">
+      <button data-tab="asa" class="active">朝管理</button>
+      <button data-tab="hiru">昼管理</button>
+      <button data-tab="yugata">夕管理</button>
+    </nav>
 
-  <div class="sprout-wrap">
-    <svg class="sprout-svg" id="sprout" width="46" height="52" viewBox="0 0 46 52"></svg>
-    <div class="progress-text">
-      <div class="big" id="progressBig">0 / 0</div>
-      <div class="small" id="progressSmall">完了したタスク</div>
-      <div class="bar-track"><div class="bar-fill" id="barFill" style="width:0%"></div></div>
+    <div class="date-select" id="dateSelect"></div>
+
+    <div class="sprout-wrap">
+      <svg class="sprout-svg" id="sprout" width="46" height="52" viewBox="0 0 46 52"></svg>
+      <div class="progress-text">
+        <div class="big" id="progressBig">0 / 0</div>
+        <div class="small" id="progressSmall">完了したタスク</div>
+        <div class="bar-track"><div class="bar-fill" id="barFill" style="width:0%"></div></div>
+      </div>
+    </div>
+
+    <div class="top-actions">
+      <button class="foot-btn" id="undoBtn" disabled>↩ 取消</button>
+      <button class="foot-btn" id="backupBtn">💾 保存</button>
+      <button class="foot-btn" id="restoreBtn">📂 復元</button>
     </div>
   </div>
 
-  <div class="top-actions">
-    <button class="foot-btn" id="undoBtn" disabled>↩ 取消</button>
-    <button class="foot-btn" id="backupBtn">💾 保存</button>
-    <button class="foot-btn" id="restoreBtn">📂 復元</button>
+  <div id="dutyModeHeader" style="display:none;">
+    <nav class="tabs" id="dutySubNav">
+      <button data-dsub="pref" class="active">希望表</button>
+      <button data-dsub="score">スコア</button>
+      <button data-dsub="calendar">カレンダー</button>
+    </nav>
+    <div class="top-actions" id="dutyTopActions">
+      <button class="foot-btn" id="dutyUndoBtn" disabled>↩ 取消</button>
+      <button class="foot-btn" id="dutyBackupBtn">💾 保存</button>
+      <button class="foot-btn" id="dutyRestoreBtn">📂 復元</button>
+    </div>
   </div>
 
   <div class="conn-banner" id="connBanner"><span class="conn-dot"></span><span id="connBannerText">オフラインです。通信が回復すると自動的に同期されます</span></div>
 </header>
 
 <main id="main"></main>
+<main id="dutyMain" style="display:none; padding:12px 16px 16px; max-width:640px; margin:0 auto;"></main>
 
 <div class="modal-overlay" id="restoreModal">
   <div class="modal-sheet">
@@ -296,6 +390,55 @@
     <div class="modal-sub" id="restoreSub">このタブの保存済みバックアップ一覧</div>
     <div id="backupList"></div>
     <button class="modal-close" id="closeModal">閉じる</button>
+  </div>
+</div>
+
+<div class="modal-overlay" id="nameModal">
+  <div class="modal-sheet">
+    <div class="modal-title">あなたの名前を選んでください</div>
+    <div class="modal-sub">希望表への入力に使います。このデバイスに記憶されます</div>
+    <div id="nameList"></div>
+    <button class="modal-close" id="closeNameModal">閉じる</button>
+  </div>
+</div>
+
+<div class="modal-overlay" id="specialDateModal">
+  <div class="modal-sheet">
+    <div class="modal-title">特例日を管理</div>
+    <div class="modal-sub">土日・祝日以外に管理が必要な日の追加や、その日のポイントの変更ができます</div>
+    <div id="specialDateForm"></div>
+    <div id="specialDateList"></div>
+    <button class="modal-close" id="closeSpecialDateModal">閉じる</button>
+  </div>
+</div>
+
+<div class="modal-overlay" id="dutyRestoreModal">
+  <div class="modal-sheet">
+    <div class="modal-title">当番管理のバックアップから復元</div>
+    <div class="modal-sub">名簿・特例日・集計設定を復元します(希望表・カレンダーの入力自体は対象外です)</div>
+    <div id="dutyBackupList"></div>
+    <button class="modal-close" id="closeDutyRestoreModal">閉じる</button>
+  </div>
+</div>
+
+<div class="modal-overlay" id="rosterModal">
+  <div class="modal-sheet">
+    <div class="modal-title">名簿を管理</div>
+    <div class="modal-sub">新規氏名追加、削除ができます(管理者のみ)</div>
+    <div style="display:flex; gap:8px; margin-bottom:12px;">
+      <input type="text" id="rosterNewName" placeholder="名前を入力" style="flex:1; border:1px solid var(--line); border-radius:10px; padding:9px;">
+      <button id="rosterAddBtn" style="border:none; background:var(--leaf-600); color:#fff; border-radius:10px; padding:9px 14px; font-weight:700;">追加</button>
+    </div>
+    <div id="rosterList"></div>
+    <button class="modal-close" id="closeRosterModal">閉じる</button>
+  </div>
+</div>
+
+<div class="modal-overlay" id="calendarDayModal">
+  <div class="modal-sheet">
+    <div class="modal-title" id="calDayTitle">日付</div>
+    <div id="calDayBody"></div>
+    <button class="modal-close" id="closeCalDayModal">閉じる</button>
   </div>
 </div>
 
@@ -341,7 +484,7 @@ const firebaseConfig = {
 };
 
 const HISTORY_DAYS = 7; // 過去何日分の記録を保持するか
-const BACKUP_LIMIT = 30; // バックアップの保持件数
+const BACKUP_LIMIT = 50; // バックアップの保持件数
 
 let db = null;
 let firebaseReady = false;
@@ -753,7 +896,7 @@ async function undo(){
   await saveChecks(currentTab);
   updateUndoBtn();
   render();
-  showToast("取り消しました");
+  showToast("元に戻しました");
 }
 function updateUndoBtn(){
   document.getElementById("undoBtn").disabled = isHistoryMode() || undoStacks[currentTab].length===0;
@@ -919,7 +1062,8 @@ function render(){
       const addRow=document.createElement("div");
       addRow.className="add-row";
       addRow.innerHTML=`
-        <input type="text" placeholder="タスクを追加" data-add-input="${section.id}">
+        <input type="text" placeholder="タスクを追加" data-add-input="${section.id}" style="flex:1.6;">
+        <input type="text" placeholder="担当(任意)" data-add-assignee="${section.id}" style="flex:1;">
         <button data-add-btn="${section.id}">追加</button>
       `;
       list.appendChild(addRow);
@@ -1069,20 +1213,21 @@ function render(){
       if(isHistoryMode()) return;
       const sId=btn.getAttribute("data-add-btn");
       const input=main.querySelector(`[data-add-input="${sId}"]`);
+      const assigneeInput=main.querySelector(`[data-add-assignee="${sId}"]`);
       const val=input.value.trim();
       if(!val) return;
       pushUndo(currentTab);
       const sec=structures[currentTab].find(s=>s.id===sId);
-      sec.tasks.push({ id:genId("t"), text:val, assignee:"" });
+      sec.tasks.push({ id:genId("t"), text:val, assignee: assigneeInput ? assigneeInput.value.trim() : "" });
       await saveStructure(currentTab);
       render();
       showToast("タスクを追加しました");
     });
   });
-  main.querySelectorAll("[data-add-input]").forEach(input=>{
+  main.querySelectorAll("[data-add-input], [data-add-assignee]").forEach(input=>{
     input.addEventListener("keydown", (e)=>{
       if(e.key==="Enter"){
-        const sId = input.getAttribute("data-add-input");
+        const sId = input.getAttribute("data-add-input") || input.getAttribute("data-add-assignee");
         main.querySelector(`[data-add-btn="${sId}"]`).click();
       }
     });
@@ -1231,10 +1376,802 @@ document.getElementById("closeModal").addEventListener("click", ()=>{
   document.getElementById("restoreModal").classList.remove("show");
 });
 
+/* =========================================================================
+   当番管理モジュール (希望表 / スコア / カレンダー)
+   ========================================================================= */
+
+/* ---- 権限まわり(簡易パスワード。必要に応じて下の2つの値を書き換えてください) ---- */
+const ADMIN_PASSWORD  = "kanri-admin";   // スコアのポイント設定・特別な日の追加に必要
+const EDITOR_PASSWORD = "kanri-editor";  // カレンダーへの当番入力に必要
+
+let isAdmin  = localStorage.getItem("dutyIsAdmin")==="true";
+let isEditor = localStorage.getItem("dutyIsEditor")==="true";
+let myName   = localStorage.getItem("dutyMyName") || "";
+
+function unlockAdmin(){
+  if(isAdmin) return true;
+  const pw = prompt("管理者パスワードを入力してください(スコアのポイント設定・特別な日の追加に使えます)");
+  if(pw===null) return false;
+  if(pw===ADMIN_PASSWORD){
+    isAdmin=true; localStorage.setItem("dutyIsAdmin","true");
+    showToast("管理者モードを解除しました");
+    renderDutyPanel();
+    return true;
+  }
+  showToast("パスワードが違います");
+  return false;
+}
+function unlockEditor(){
+  if(isEditor) return true;
+  const pw = prompt("編集者パスワードを入力してください(カレンダーへの当番入力に使えます)");
+  if(pw===null) return false;
+  if(pw===EDITOR_PASSWORD){
+    isEditor=true; localStorage.setItem("dutyIsEditor","true");
+    showToast("編集者モードを解除しました");
+    return true;
+  }
+  showToast("パスワードが違います");
+  return false;
+}
+function lockAdmin(){ isAdmin=false; localStorage.removeItem("dutyIsAdmin"); showToast("管理者モードをロックしました"); renderDutyPanel(); }
+function lockEditor(){ isEditor=false; localStorage.removeItem("dutyIsEditor"); showToast("編集者モードをロックしました"); renderDutyPanel(); }
+
+/* ---- 名簿(ロースター) ---- */
+const ROSTER_DEFAULT = ["木下","清水","杉山","鈴木","諏訪田","瀬川","中野翔","伊藤","中野真","辻","増田","藤井","河野","新宮","杉本","滝口","中村","橋本","和田"];
+let roster = ROSTER_DEFAULT.slice();
+function rosterRef(){ return db.collection("duty_settings").doc("roster"); }
+async function loadRoster(){
+  try{
+    const snap = await rosterRef().get();
+    if(snap.exists && Array.isArray(snap.data().names) && snap.data().names.length){
+      roster = snap.data().names;
+    }else{
+      await rosterRef().set({ names: roster });
+    }
+  }catch(e){ /* オフライン時などはデフォルトのまま */ }
+}
+async function saveRoster(){
+  try{ await rosterRef().set({ names: roster }); }catch(e){ showToast("名簿の保存に失敗しました"); }
+}
+function openRosterModal(){
+  renderRosterList();
+  document.getElementById("rosterModal").classList.add("show");
+}
+function renderRosterList(){
+  const listEl = document.getElementById("rosterList");
+  listEl.innerHTML = roster.map(n=>`
+    <div class="special-date-row">
+      <div class="sd-label">${escapeHtml(n)}</div>
+      <button data-roster-del="${escapeHtml(n)}">×</button>
+    </div>`).join("") || `<div class="empty-note">名簿が空です</div>`;
+  listEl.querySelectorAll("[data-roster-del]").forEach(btn=>{
+    btn.addEventListener("click", async ()=>{
+      const n = btn.getAttribute("data-roster-del");
+      if(!confirm(`「${n}」を名簿から削除します。よろしいですか？`)) return;
+      pushDutyUndo();
+      roster = roster.filter(x=>x!==n);
+      await saveRoster();
+      scheduleDutyAutoBackup();
+      renderRosterList();
+      renderDutyPanel();
+      showToast("削除しました");
+    });
+  });
+}
+document.getElementById("rosterAddBtn").addEventListener("click", async ()=>{
+  const input = document.getElementById("rosterNewName");
+  const val = input.value.trim();
+  if(!val) return;
+  if(roster.includes(val)){ showToast("すでに名簿にあります"); return; }
+  pushDutyUndo();
+  roster.push(val);
+  await saveRoster();
+  scheduleDutyAutoBackup();
+  input.value="";
+  renderRosterList();
+  renderDutyPanel();
+  showToast(`「${val}」を追加しました`);
+});
+document.getElementById("closeRosterModal").addEventListener("click", ()=>{
+  document.getElementById("rosterModal").classList.remove("show");
+});
+
+/* ---- 年度設定(スコアの集計期間) ---- */
+let fiscalStartMonth = 4; // 1-12。既定は4月始まり
+function fiscalSettingsRef(){ return db.collection("duty_settings").doc("fiscal"); }
+async function loadFiscalSettings(){
+  try{
+    const snap = await fiscalSettingsRef().get();
+    if(snap.exists && typeof snap.data().startMonth==="number"){
+      fiscalStartMonth = snap.data().startMonth;
+    }else{
+      await fiscalSettingsRef().set({ startMonth: fiscalStartMonth });
+    }
+  }catch(e){ /* オフライン時などは既定値のまま */ }
+}
+async function saveFiscalSettings(){
+  try{ await fiscalSettingsRef().set({ startMonth: fiscalStartMonth }); }catch(e){ showToast("年度設定の保存に失敗しました"); }
+}
+function fiscalYearForDate(dateStr){
+  const d = new Date(dateStr+"T00:00:00");
+  const y = d.getFullYear(), m = d.getMonth()+1;
+  return (m >= fiscalStartMonth) ? y : y-1;
+}
+
+/* ---- 当番管理(名簿・特別な日・年度設定)の 元に戻す / バックアップ / 復元 ---- */
+let dutyUndoStack = [];
+function dutySnapshot(){
+  return {
+    roster: roster.slice(),
+    specialDates: JSON.parse(JSON.stringify(specialDates)),
+    fiscalStartMonth
+  };
+}
+function pushDutyUndo(){
+  dutyUndoStack.push(dutySnapshot());
+  if(dutyUndoStack.length>20) dutyUndoStack.shift();
+  updateDutyUndoBtn();
+}
+function updateDutyUndoBtn(){
+  const btn = document.getElementById("dutyUndoBtn");
+  if(btn) btn.disabled = dutyUndoStack.length===0;
+}
+async function applySpecialDatesSnapshot(targetMap){
+  try{
+    const snap = await specialDatesCol().get();
+    const ops = [];
+    snap.forEach(doc=>{ if(!(doc.id in targetMap)) ops.push(specialDatesCol().doc(doc.id).delete()); });
+    Object.keys(targetMap).forEach(ds=>{ ops.push(specialDatesCol().doc(ds).set(targetMap[ds])); });
+    await Promise.all(ops);
+    specialDates = JSON.parse(JSON.stringify(targetMap));
+  }catch(e){ showToast("特別な日の復元に失敗しました"); }
+}
+async function undoDuty(){
+  if(dutyUndoStack.length===0) return;
+  const prev = dutyUndoStack.pop();
+  roster = prev.roster;
+  fiscalStartMonth = prev.fiscalStartMonth;
+  await saveRoster();
+  await saveFiscalSettings();
+  await applySpecialDatesSnapshot(prev.specialDates);
+  updateDutyUndoBtn();
+  renderDutyPanel();
+  showToast("元に戻しました");
+}
+function dutyBackupsCol(){ return db.collection("duty_backups"); }
+async function createDutyBackup(silent){
+  if(!firebaseReady){ if(!silent) showConfigWarningOnce(); return; }
+  try{
+    await dutyBackupsCol().add({
+      roster: roster.slice(),
+      specialDates: JSON.parse(JSON.stringify(specialDates)),
+      fiscalStartMonth,
+      auto: !!silent,
+      createdAt: firebase.firestore.FieldValue.serverTimestamp()
+    });
+    if(!silent) showToast("保存しました");
+    await pruneDutyBackups();
+  }catch(e){
+    if(!silent) showToast("保存に失敗しました。通信を確認してください");
+  }
+}
+async function pruneDutyBackups(){
+  try{
+    const q = await dutyBackupsCol().orderBy("createdAt","desc").get();
+    const docs = q.docs;
+    if(docs.length>30){
+      const excess = docs.slice(30);
+      for(const d of excess){ await dutyBackupsCol().doc(d.id).delete(); }
+    }
+  }catch(e){ /* 整理失敗は無視 */ }
+}
+const dutyAutoBackupState = { timer:null };
+function scheduleDutyAutoBackup(){
+  clearTimeout(dutyAutoBackupState.timer);
+  dutyAutoBackupState.timer = setTimeout(()=>createDutyBackup(true), 4000);
+}
+async function openDutyRestoreModal(){
+  const listEl = document.getElementById("dutyBackupList");
+  listEl.innerHTML = `<div class="empty-note">読み込み中…</div>`;
+  document.getElementById("dutyRestoreModal").classList.add("show");
+  try{
+    const q = await dutyBackupsCol().orderBy("createdAt","desc").limit(30).get();
+    if(q.empty){
+      listEl.innerHTML = `<div class="empty-note">まだバックアップがありません</div>`;
+      return;
+    }
+    listEl.innerHTML = "";
+    q.docs.forEach(doc=>{
+      const data = doc.data();
+      const ts = data.createdAt && data.createdAt.toDate ? data.createdAt.toDate() : new Date();
+      const label = `${ts.getMonth()+1}/${ts.getDate()} ${pad(ts.getHours())}:${pad(ts.getMinutes())} ${data.auto?"(自動保存)":"(手動保存)"}`;
+      const item = document.createElement("div");
+      item.className = "backup-item";
+      item.innerHTML = `<div class="info">${label}<small>復元すると名簿・特別な日・年度設定が入れ替わります</small></div><button data-duty-restore="${doc.id}">復元</button>`;
+      listEl.appendChild(item);
+    });
+    listEl.querySelectorAll("[data-duty-restore]").forEach(btn=>{
+      btn.addEventListener("click", async ()=>{
+        if(!confirm("このバックアップの内容で復元します。今の名簿・特別な日・年度設定は上書きされます。よろしいですか？")) return;
+        try{
+          const snap = await dutyBackupsCol().doc(btn.getAttribute("data-duty-restore")).get();
+          const data = snap.data();
+          pushDutyUndo();
+          roster = data.roster || roster;
+          fiscalStartMonth = typeof data.fiscalStartMonth==="number" ? data.fiscalStartMonth : fiscalStartMonth;
+          await saveRoster();
+          await saveFiscalSettings();
+          await applySpecialDatesSnapshot(data.specialDates || {});
+          document.getElementById("dutyRestoreModal").classList.remove("show");
+          renderDutyPanel();
+          showToast("復元しました");
+        }catch(e){ showToast("復元に失敗しました"); }
+      });
+    });
+  }catch(e){
+    listEl.innerHTML = `<div class="empty-note">読み込みに失敗しました<br><small style="word-break:break-all;">${escapeHtml(e && e.message ? e.message : String(e))}</small></div>`;
+  }
+}
+document.getElementById("dutyUndoBtn").addEventListener("click", ()=>{
+  if(!unlockAdmin()) return;
+  undoDuty();
+});
+document.getElementById("dutyBackupBtn").addEventListener("click", ()=>{
+  if(!unlockAdmin()) return;
+  createDutyBackup(false);
+});
+document.getElementById("dutyRestoreBtn").addEventListener("click", ()=>{
+  if(!unlockAdmin()) return;
+  openDutyRestoreModal();
+});
+document.getElementById("closeDutyRestoreModal").addEventListener("click", ()=>{
+  document.getElementById("dutyRestoreModal").classList.remove("show");
+});
+
+/* ---- 日本の祝日計算 (2000〜2099年を対象とした一般的な近似式) ---- */
+function pad2(n){ return n<10 ? "0"+n : ""+n; }
+function dateKey(d){ return d.getFullYear()+"-"+pad2(d.getMonth()+1)+"-"+pad2(d.getDate()); }
+function isWeekend(d){ const w=d.getDay(); return w===0 || w===6; }
+function springEquinoxDay(year){ return Math.floor(20.8431 + 0.242194*(year-1980) - Math.floor((year-1980)/4)); }
+function autumnEquinoxDay(year){ return Math.floor(23.2488 + 0.242194*(year-1980) - Math.floor((year-1980)/4)); }
+function nthMondayDate(year, month, n){
+  const d = new Date(year, month-1, 1);
+  let count=0;
+  while(d.getMonth()===month-1){
+    if(d.getDay()===1){ count++; if(count===n) return d.getDate(); }
+    d.setDate(d.getDate()+1);
+  }
+  return null;
+}
+function baseHolidaysForYear(year){
+  const list = [
+    [1,1,"元日"], [2,11,"建国記念の日"], [2,23,"天皇誕生日"],
+    [4,29,"昭和の日"], [5,3,"憲法記念日"], [5,4,"みどりの日"], [5,5,"こどもの日"],
+    [8,11,"山の日"], [11,3,"文化の日"], [11,23,"勤労感謝の日"],
+    [1, nthMondayDate(year,1,2), "成人の日"],
+    [7, nthMondayDate(year,7,3), "海の日"],
+    [9, nthMondayDate(year,9,3), "敬老の日"],
+    [10, nthMondayDate(year,10,2), "スポーツの日"],
+    [3, springEquinoxDay(year), "春分の日"],
+    [9, autumnEquinoxDay(year), "秋分の日"]
+  ];
+  const map={};
+  list.forEach(([m,d,name])=>{ if(d) map[dateKey(new Date(year,m-1,d))]=name; });
+  return map;
+}
+const holidayYearCache = {};
+function holidayMapForYear(year){
+  if(holidayYearCache[year]) return holidayYearCache[year];
+  let map = Object.assign({}, baseHolidaysForYear(year-1), baseHolidaysForYear(year), baseHolidaysForYear(year+1));
+  // 振替休日: 祝日が日曜のとき、その次の祝日でない日が休日になる
+  const subs={};
+  Object.keys(map).forEach(k=>{
+    const d = new Date(k+"T00:00:00");
+    if(d.getDay()===0){
+      const nd = new Date(d);
+      do{ nd.setDate(nd.getDate()+1); } while(map[dateKey(nd)] || subs[dateKey(nd)]);
+      subs[dateKey(nd)] = "振替休日";
+    }
+  });
+  Object.assign(map, subs);
+  // 国民の休日: 祝日と祝日に挟まれた平日(日曜以外)
+  const between={};
+  Object.keys(map).forEach(k=>{
+    const d = new Date(k+"T00:00:00");
+    const mid = new Date(d); mid.setDate(mid.getDate()+1);
+    const next = new Date(d); next.setDate(next.getDate()+2);
+    const midKey = dateKey(mid);
+    if(!map[midKey] && !between[midKey] && mid.getDay()!==0 && map[dateKey(next)]){
+      between[midKey] = "国民の休日";
+    }
+  });
+  Object.assign(map, between);
+  holidayYearCache[year] = map;
+  return map;
+}
+function japaneseHolidayName(d){
+  return holidayMapForYear(d.getFullYear())[dateKey(d)] || null;
+}
+
+/* ---- 特別な日(追加の管理日・ポイント上書き) ---- */
+let specialDates = {}; // { "YYYY-MM-DD": {custom:bool, points:number, label:string} }
+function specialDatesCol(){ return db.collection("special_dates"); }
+async function loadSpecialDates(){
+  try{
+    const snap = await specialDatesCol().get();
+    const map={};
+    snap.forEach(doc=>{ map[doc.id]=doc.data(); });
+    specialDates = map;
+  }catch(e){ /* 読み込み失敗時は空のまま */ }
+}
+function isDutyDate(dateStr){
+  const d = new Date(dateStr+"T00:00:00");
+  if(isWeekend(d)) return true;
+  if(japaneseHolidayName(d)) return true;
+  if(specialDates[dateStr] && specialDates[dateStr].custom) return true;
+  return false;
+}
+function pointsForDate(dateStr){
+  const sd = specialDates[dateStr];
+  return (sd && typeof sd.points==="number") ? sd.points : 1;
+}
+function labelForDate(dateStr){
+  const d = new Date(dateStr+"T00:00:00");
+  const h = japaneseHolidayName(d);
+  if(h) return h;
+  const sd = specialDates[dateStr];
+  if(sd && sd.label) return sd.label;
+  if(sd && sd.custom) return "管理日";
+  if(isWeekend(d)) return d.getDay()===0 ? "日曜" : "土曜";
+  return "";
+}
+
+/* ---- 希望表 ---- */
+let preferences = {}; // { "YYYY-MM-DD": {name:true,...} }
+function preferencesCol(){ return db.collection("preferences"); }
+async function loadPreferencesRange(dateStrs){
+  try{
+    const results = await Promise.all(dateStrs.map(ds=>preferencesCol().doc(ds).get()));
+    results.forEach((snap,i)=>{
+      preferences[dateStrs[i]] = (snap.exists && snap.data().wants) ? snap.data().wants : {};
+    });
+  }catch(e){ /* オフライン時は既存キャッシュのまま */ }
+}
+async function togglePreference(dateStr){
+  if(!myName){ openNameModal(()=>togglePreference(dateStr)); return; }
+  const current = preferences[dateStr] || {};
+  const next = Object.assign({}, current);
+  if(next[myName]) delete next[myName]; else next[myName]=true;
+  preferences[dateStr]=next;
+  try{
+    await preferencesCol().doc(dateStr).set({ wants: next });
+  }catch(e){ showToast("保存に失敗しました"); }
+  renderDutyPanel();
+}
+
+/* ---- カレンダー(実際の当番) ---- */
+let calendarAssign = {}; // { "YYYY-MM-DD": ["name1","name2"] }
+function calendarCol(){ return db.collection("calendar"); }
+async function loadCalendarRange(dateStrs){
+  try{
+    const results = await Promise.all(dateStrs.map(ds=>calendarCol().doc(ds).get()));
+    results.forEach((snap,i)=>{
+      calendarAssign[dateStrs[i]] = (snap.exists && Array.isArray(snap.data().people)) ? snap.data().people : [];
+    });
+  }catch(e){ /* オフライン時は既存キャッシュのまま */ }
+}
+async function loadAllCalendarForScore(){
+  try{
+    const snap = await calendarCol().get();
+    const map={};
+    snap.forEach(doc=>{ map[doc.id] = Array.isArray(doc.data().people) ? doc.data().people : []; });
+    return map;
+  }catch(e){ return calendarAssign; }
+}
+async function saveCalendarDay(dateStr, people){
+  calendarAssign[dateStr]=people;
+  try{
+    await calendarCol().doc(dateStr).set({ people, updatedAt: firebase.firestore.FieldValue.serverTimestamp() });
+    showToast("保存しました");
+  }catch(e){ showToast("保存に失敗しました"); }
+}
+
+/* ---- 名前選択モーダル ---- */
+let nameModalCallback = null;
+function openNameModal(cb){
+  nameModalCallback = cb || null;
+  const listEl = document.getElementById("nameList");
+  listEl.innerHTML = roster.map(n=>`<div class="name-chip" data-pick-name="${escapeHtml(n)}">${escapeHtml(n)}</div>`).join("");
+  listEl.querySelectorAll("[data-pick-name]").forEach(el=>{
+    el.addEventListener("click", ()=>{
+      myName = el.getAttribute("data-pick-name");
+      localStorage.setItem("dutyMyName", myName);
+      document.getElementById("nameModal").classList.remove("show");
+      showToast(`「${myName}」として入力します`);
+      if(nameModalCallback) nameModalCallback();
+      renderDutyPanel();
+    });
+  });
+  document.getElementById("nameModal").classList.add("show");
+}
+document.getElementById("closeNameModal").addEventListener("click", ()=>{
+  document.getElementById("nameModal").classList.remove("show");
+});
+
+/* ---- 日付ユーティリティ ---- */
+function addDays(d,n){ const nd=new Date(d); nd.setDate(nd.getDate()+n); return nd; }
+function upcomingDutyDates(days){
+  const list=[];
+  let d = new Date(); d.setHours(0,0,0,0);
+  for(let i=0;i<days;i++){
+    const ds = dateKey(d);
+    if(isDutyDate(ds)) list.push(ds);
+    d = addDays(d,1);
+  }
+  return list;
+}
+function monthDates(year,month){ // month: 0-11
+  const list=[];
+  const first = new Date(year,month,1);
+  const last = new Date(year,month+1,0);
+  for(let day=1; day<=last.getDate(); day++){
+    list.push(dateKey(new Date(year,month,day)));
+  }
+  return { first, list };
+}
+
+/* ---- 当番管理: 全体の描画振り分け ---- */
+let dutySub = "pref";
+async function renderDutyPanel(){
+  const el = document.getElementById("dutyMain");
+  const topActions = document.getElementById("dutyTopActions");
+  if(topActions) topActions.style.display = isAdmin ? "" : "none";
+  if(dutySub==="pref") await renderPrefPanel(el);
+  else if(dutySub==="score") await renderScorePanel(el);
+  else await renderCalendarPanel(el);
+}
+
+/* ---- 希望表パネル(今月・来月を分けて表示) ---- */
+function prefRowHtml(ds, editable){
+  const d = new Date(ds+"T00:00:00");
+  const dow = ["日","月","火","水","木","金","土"][d.getDay()];
+  const label = labelForDate(ds);
+  const wants = preferences[ds] || {};
+  const names = Object.keys(wants).filter(n=>wants[n]);
+  const mine = myName && wants[myName];
+  const stateClass = ds < todayStr ? "is-past" : (ds === todayStr ? "is-today" : "is-future");
+  const rightHtml = editable
+    ? `<button class="pref-toggle ${mine?"mine":""}" data-pref-date="${ds}">${mine?"✓ 希望済み":"＋ 希望する"}</button>`
+    : `<span class="pref-readonly-mark">${ds===todayStr?"本日":(ds<todayStr?"終了":"")}</span>`;
+  return `
+    <div class="pref-row ${stateClass}">
+      <div class="pref-date">
+        <div class="pref-day">${d.getMonth()+1}/${d.getDate()}(${dow})</div>
+        <div class="pref-label">${escapeHtml(label)}</div>
+        ${ds===todayStr ? `<div class="pref-today-dot">今日</div>` : ``}
+      </div>
+      <div class="pref-wanters">${names.length? escapeHtml(names.join("・")) : "まだ希望なし"}</div>
+      ${rightHtml}
+    </div>`;
+}
+async function renderPrefPanel(el){
+  el.innerHTML = `<div class="empty-note">読み込み中…</div>`;
+  const now = new Date();
+  const thisM = { year: now.getFullYear(), month: now.getMonth() };
+  const nextM = { year: now.getMonth()===11 ? now.getFullYear()+1 : now.getFullYear(), month: (now.getMonth()+1)%12 };
+  const thisDates = monthDates(thisM.year, thisM.month).list.filter(isDutyDate);
+  const nextDates = monthDates(nextM.year, nextM.month).list.filter(isDutyDate);
+  await loadPreferencesRange(thisDates.concat(nextDates));
+
+  const meBar = `
+    <div class="me-bar">
+      現在の入力者: <b>${myName ? escapeHtml(myName) : "未選択"}</b>
+      <button id="changeNameBtn">${myName?"変更":"名前を選ぶ"}</button>
+    </div>`;
+
+  const nextRows = nextDates.map(ds=>prefRowHtml(ds, true)).join("");
+  const nextBlock = `
+    <div class="pref-month-block">
+      <div class="pref-month-head">
+        <div class="name">${nextM.year}年${nextM.month+1}月 <span class="pref-month-tag next">来月・希望入力</span></div>
+      </div>
+      <div class="pref-month-sub">当番が必要な日に希望を入力できます</div>
+      ${nextRows || `<div class="empty-note">対象の日がありません</div>`}
+    </div>`;
+
+  const thisRows = thisDates.map(ds=>prefRowHtml(ds, false)).join("");
+  const thisBlock = `
+    <div class="pref-month-block">
+      <div class="pref-month-head">
+        <div class="name">${thisM.year}年${thisM.month+1}月 <span class="pref-month-tag this">今月・記録</span></div>
+      </div>
+      <div class="pref-month-sub">記録用の表示です（編集はできません）</div>
+      ${thisRows || `<div class="empty-note">対象の日がありません</div>`}
+    </div>`;
+
+  el.innerHTML = meBar + `<div class="duty-section-title">休日管理 希望表</div>` + nextBlock + thisBlock;
+  document.getElementById("changeNameBtn").addEventListener("click", ()=>openNameModal());
+  el.querySelectorAll("[data-pref-date]").forEach(btn=>{
+    btn.addEventListener("click", ()=>togglePreference(btn.getAttribute("data-pref-date")));
+  });
+}
+
+/* ---- スコアパネル ---- */
+let selectedFiscalYear = null; // null = 今年度(現在の会計年度)
+async function renderScorePanel(el){
+  el.innerHTML = `<div class="empty-note">読み込み中…</div>`;
+  const allCal = await loadAllCalendarForScore();
+
+  const fyOfCurrent = fiscalYearForDate(dateKey(new Date()));
+  const fySet = new Set([fyOfCurrent]);
+  Object.keys(allCal).forEach(ds=>fySet.add(fiscalYearForDate(ds)));
+  const fyList = Array.from(fySet).sort((a,b)=>b-a);
+  const fy = (selectedFiscalYear!==null && fySet.has(selectedFiscalYear)) ? selectedFiscalYear : fyOfCurrent;
+
+  const scores = {}, counts = {};
+  roster.forEach(n=>{ scores[n]=0; counts[n]=0; });
+  Object.keys(allCal).forEach(ds=>{
+    if(fiscalYearForDate(ds)!==fy) return;
+    const pts = pointsForDate(ds);
+    (allCal[ds]||[]).forEach(name=>{
+      if(!(name in scores)){ scores[name]=0; counts[name]=0; }
+      scores[name]+=pts;
+      counts[name]+=1;
+    });
+  });
+  const sorted = Object.keys(scores).sort((a,b)=>scores[b]-scores[a]);
+  const rowsHtml = sorted.map((name,i)=>`
+    <tr>
+      <td><span class="score-rank">${i+1}</span></td>
+      <td>${escapeHtml(name)}</td>
+      <td>${counts[name]}回</td>
+      <td><b>${scores[name]}</b>pt</td>
+    </tr>`).join("");
+
+  const endMonth = fiscalStartMonth===1 ? 12 : fiscalStartMonth-1;
+  const periodLabel = `${fy}年${fiscalStartMonth}月 〜 ${fy+1}年${endMonth}月`;
+
+  el.innerHTML = `
+    <div class="duty-section-title">
+      スコア
+      <span>
+        <button class="lock-btn" id="rosterBtn">🔒 名簿を管理</button>
+        <button class="lock-btn" id="specialDateBtn">🔒 特別な日を管理</button>
+      </span>
+    </div>
+    <div class="me-bar">
+      集計期間:
+      <select id="fySelect" style="border:1px solid var(--line); border-radius:8px; padding:5px 8px; font-size:12.5px;">
+        ${fyList.map(y=>`<option value="${y}" ${y===fy?"selected":""}>${y}年度</option>`).join("")}
+      </select>
+      <span style="font-size:11.5px; color:var(--ink-soft);">(${periodLabel})</span>
+      <button id="fiscalEditBtn" class="lock-btn">🔒 開始月を変更</button>
+    </div>
+    <table class="score-table">
+      <thead><tr><th>順位</th><th>名前</th><th>回数</th><th>スコア</th></tr></thead>
+      <tbody>${rowsHtml || `<tr><td colspan="4" class="empty-note">この期間の当番記録がありません</td></tr>`}</tbody>
+    </table>
+    <div class="empty-note">基本は1日1ポイント。お盆などは「特別な日を管理」からポイントを変更できます。集計は${fiscalStartMonth}月始まり〜翌年${endMonth}月終わりの年度ごとに記録されます</div>
+  `;
+  document.getElementById("specialDateBtn").addEventListener("click", ()=>{
+    if(!unlockAdmin()) return;
+    openSpecialDateModal();
+  });
+  document.getElementById("rosterBtn").addEventListener("click", ()=>{
+    if(!unlockAdmin()) return;
+    openRosterModal();
+  });
+  document.getElementById("fySelect").addEventListener("change", (e)=>{
+    selectedFiscalYear = parseInt(e.target.value,10);
+    renderScorePanel(el);
+  });
+  document.getElementById("fiscalEditBtn").addEventListener("click", async ()=>{
+    if(!unlockAdmin()) return;
+    const val = prompt("年度の開始月を入力してください(1〜12。例: 4月始まりなら 4)", String(fiscalStartMonth));
+    if(val===null) return;
+    const m = parseInt(val,10);
+    if(isNaN(m) || m<1 || m>12){ showToast("1〜12の数字で入力してください"); return; }
+    pushDutyUndo();
+    fiscalStartMonth = m;
+    await saveFiscalSettings();
+    scheduleDutyAutoBackup();
+    showToast("年度の開始月を変更しました");
+    renderScorePanel(el);
+  });
+}
+
+/* ---- 特別な日 管理モーダル ---- */
+function openSpecialDateModal(){
+  const formEl = document.getElementById("specialDateForm");
+  formEl.innerHTML = `
+    <div style="display:flex; gap:8px; margin-bottom:12px; flex-wrap:wrap;">
+      <input type="date" id="sdNewDate" style="flex:1; min-width:140px; border:1px solid var(--line); border-radius:10px; padding:9px;">
+      <input type="text" id="sdNewLabel" placeholder="名前(例: お盆)" style="flex:1; min-width:110px; border:1px solid var(--line); border-radius:10px; padding:9px;">
+      <input type="number" id="sdNewPoints" placeholder="pt" value="1" style="width:60px; border:1px solid var(--line); border-radius:10px; padding:9px;">
+      <button id="sdAddBtn" style="border:none; background:var(--leaf-600); color:#fff; border-radius:10px; padding:9px 14px; font-weight:700;">追加/更新</button>
+    </div>
+  `;
+  renderSpecialDateList();
+  document.getElementById("sdAddBtn").addEventListener("click", async ()=>{
+    const ds = document.getElementById("sdNewDate").value;
+    if(!ds){ showToast("日付を選んでください"); return; }
+    const label = document.getElementById("sdNewLabel").value.trim();
+    const pts = parseFloat(document.getElementById("sdNewPoints").value);
+    const existing = specialDates[ds] || {};
+    const data = {
+      custom: existing.custom || !isDutyDate(ds) ? true : (existing.custom||false),
+      points: isNaN(pts) ? 1 : pts,
+      label: label
+    };
+    // 元々土日祝でない日を追加した場合は「管理が必要な日」として扱う
+    if(!isWeekend(new Date(ds+"T00:00:00")) && !japaneseHolidayName(new Date(ds+"T00:00:00"))) data.custom = true;
+    pushDutyUndo();
+    try{
+      await specialDatesCol().doc(ds).set(data);
+      specialDates[ds] = data;
+      scheduleDutyAutoBackup();
+      showToast("保存しました");
+      renderSpecialDateList();
+      renderDutyPanel();
+    }catch(e){ showToast("保存に失敗しました"); }
+  });
+  document.getElementById("specialDateModal").classList.add("show");
+}
+function renderSpecialDateList(){
+  const listEl = document.getElementById("specialDateList");
+  const keys = Object.keys(specialDates).sort();
+  listEl.innerHTML = keys.length ? keys.map(ds=>{
+    const sd = specialDates[ds];
+    return `
+      <div class="special-date-row">
+        <div class="sd-date">${ds}</div>
+        <div class="sd-label">${escapeHtml(sd.label||"")}${sd.custom?" (追加日)":""}</div>
+        <input type="number" value="${typeof sd.points==='number'?sd.points:1}" data-sd-points="${ds}">
+        <button data-sd-del="${ds}">×</button>
+      </div>`;
+  }).join("") : `<div class="empty-note">まだ登録がありません</div>`;
+  listEl.querySelectorAll("[data-sd-points]").forEach(inp=>{
+    inp.addEventListener("change", async ()=>{
+      const ds = inp.getAttribute("data-sd-points");
+      const pts = parseFloat(inp.value);
+      pushDutyUndo();
+      specialDates[ds] = Object.assign({}, specialDates[ds], { points: isNaN(pts)?1:pts });
+      try{ await specialDatesCol().doc(ds).set(specialDates[ds]); scheduleDutyAutoBackup(); showToast("更新しました"); }
+      catch(e){ showToast("保存に失敗しました"); }
+    });
+  });
+  listEl.querySelectorAll("[data-sd-del]").forEach(btn=>{
+    btn.addEventListener("click", async ()=>{
+      const ds = btn.getAttribute("data-sd-del");
+      if(!confirm(`${ds} の設定を削除します。よろしいですか？`)) return;
+      pushDutyUndo();
+      try{ await specialDatesCol().doc(ds).delete(); delete specialDates[ds]; scheduleDutyAutoBackup(); renderSpecialDateList(); renderDutyPanel(); }
+      catch(e){ showToast("削除に失敗しました"); }
+    });
+  });
+}
+document.getElementById("closeSpecialDateModal").addEventListener("click", ()=>{
+  document.getElementById("specialDateModal").classList.remove("show");
+});
+
+/* ---- カレンダーパネル(今月・来月) ---- */
+async function renderCalendarPanel(el){
+  el.innerHTML = `<div class="empty-note">読み込み中…</div>`;
+  const now = new Date();
+  const months = [
+    { year: now.getFullYear(), month: now.getMonth() },
+    { year: now.getMonth()===11 ? now.getFullYear()+1 : now.getFullYear(), month: (now.getMonth()+1)%12 }
+  ];
+  let allDates = [];
+  months.forEach(m=>{ allDates = allDates.concat(monthDates(m.year, m.month).list); });
+  await loadCalendarRange(allDates);
+  await loadPreferencesRange(allDates.filter(isDutyDate));
+
+  let html = `<div class="duty-section-title">当番カレンダー
+    <button class="lock-btn" id="editorLockBtn">${isEditor?"🔓 編集者モード解除":"🔒 編集者パスワード入力"}</button>
+  </div>`;
+
+  months.forEach(m=>{
+    const { list } = monthDates(m.year, m.month);
+    html += `<div class="cal-month-title">${m.year}年 ${m.month+1}月</div>`;
+    html += `<div class="cal-grid">`;
+    ["日","月","火","水","木","金","土"].forEach(d=>{ html += `<div class="cal-dow">${d}</div>`; });
+    const firstDow = new Date(m.year,m.month,1).getDay();
+    for(let i=0;i<firstDow;i++){ html += `<div class="cal-cell empty"></div>`; }
+    list.forEach(ds=>{
+      const d = new Date(ds+"T00:00:00");
+      const duty = isDutyDate(ds);
+      const people = calendarAssign[ds] || [];
+      html += `<div class="cal-cell ${duty?"duty":""}" data-cal-date="${ds}">
+        <div class="cal-num">${d.getDate()}</div>
+        ${duty ? `<div class="cal-label">${escapeHtml(labelForDate(ds))}</div>` : ``}
+        ${people.length ? `<div class="cal-people">${escapeHtml(people.join("・"))}</div>` : ``}
+      </div>`;
+    });
+    html += `</div>`;
+  });
+
+  el.innerHTML = html;
+  document.getElementById("editorLockBtn").addEventListener("click", ()=>{
+    if(isEditor) lockEditor(); else { if(unlockEditor()) renderDutyPanel(); }
+  });
+  el.querySelectorAll("[data-cal-date]").forEach(cell=>{
+    cell.addEventListener("click", ()=>openCalendarDayModal(cell.getAttribute("data-cal-date")));
+  });
+}
+
+function openCalendarDayModal(ds){
+  const d = new Date(ds+"T00:00:00");
+  const dow = ["日","月","火","水","木","金","土"][d.getDay()];
+  const duty = isDutyDate(ds);
+  const label = labelForDate(ds);
+  const pts = pointsForDate(ds);
+  const wants = preferences[ds] || {};
+  const wanterNames = Object.keys(wants).filter(n=>wants[n]);
+  const assigned = calendarAssign[ds] || [];
+
+  document.getElementById("calDayTitle").textContent = `${d.getFullYear()}/${d.getMonth()+1}/${d.getDate()}(${dow})`;
+  const bodyEl = document.getElementById("calDayBody");
+
+  let infoHtml = `<div class="cal-day-info">
+    ${duty ? `<b>${escapeHtml(label)}</b>・当番が必要な日(${pts}pt)<br>` : `通常日(当番は不要です)<br>`}
+    希望している人: ${wanterNames.length ? escapeHtml(wanterNames.join("・")) : "なし"}
+  </div>`;
+
+  if(isEditor){
+    infoHtml += roster.map(n=>`
+      <div class="roster-check-row">
+        <input type="checkbox" id="calpick-${n}" ${assigned.includes(n)?"checked":""}>
+        <label for="calpick-${n}">${escapeHtml(n)}${wanterNames.includes(n)?" (希望あり)":""}</label>
+      </div>`).join("");
+    infoHtml += `<button id="calDaySave" style="width:100%; margin-top:12px; border:none; background:var(--leaf-600); color:#fff; border-radius:10px; padding:11px; font-weight:700; cursor:pointer;">この内容で保存</button>`;
+  }else{
+    infoHtml += `<div class="empty-note">当番を編集するには編集者パスワードが必要です</div>`;
+  }
+  bodyEl.innerHTML = infoHtml;
+
+  if(isEditor){
+    document.getElementById("calDaySave").addEventListener("click", async ()=>{
+      const picked = roster.filter(n=>document.getElementById(`calpick-${n}`).checked);
+      await saveCalendarDay(ds, picked);
+      document.getElementById("calendarDayModal").classList.remove("show");
+      renderDutyPanel();
+    });
+  }
+  document.getElementById("calendarDayModal").classList.add("show");
+}
+document.getElementById("closeCalDayModal").addEventListener("click", ()=>{
+  document.getElementById("calendarDayModal").classList.remove("show");
+});
+
+/* ---- モード / サブタブ切り替え ---- */
+document.getElementById("modeSwitch").addEventListener("click", async (e)=>{
+  const btn = e.target.closest("button[data-mode]");
+  if(!btn) return;
+  document.querySelectorAll("#modeSwitch button").forEach(b=>b.classList.remove("active"));
+  btn.classList.add("active");
+  const mode = btn.getAttribute("data-mode");
+  const isDuty = mode==="duty";
+  document.getElementById("checkModeHeader").style.display = isDuty ? "none" : "";
+  document.getElementById("dutyModeHeader").style.display = isDuty ? "" : "none";
+  document.getElementById("main").style.display = isDuty ? "none" : "";
+  document.getElementById("dutyMain").style.display = isDuty ? "" : "none";
+  if(isDuty){ await renderDutyPanel(); }
+});
+document.getElementById("dutySubNav").addEventListener("click", async (e)=>{
+  const btn = e.target.closest("button[data-dsub]");
+  if(!btn) return;
+  document.querySelectorAll("#dutySubNav button").forEach(b=>b.classList.remove("active"));
+  btn.classList.add("active");
+  dutySub = btn.getAttribute("data-dsub");
+  await renderDutyPanel();
+});
+
 /* ---------- init ---------- */
 (async function init(){
   await initFirebase();
   setupConnectionBanner();
+  await Promise.all([loadRoster(), loadSpecialDates(), loadFiscalSettings()]);
   await loadTab(currentTab);
   render();
 })();
