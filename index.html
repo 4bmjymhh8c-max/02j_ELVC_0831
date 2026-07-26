@@ -1252,7 +1252,7 @@ function updateProgress(total,done){
   document.getElementById("barFill").style.width=pct+"%";
   document.getElementById("progressSmall").textContent =
     isHistoryMode() ? "その日の完了タスク" :
-    (pct===100 && total>0 ? "今日の分、完了しました 🌿" : "完了したタスク");
+    (pct===100 && total>0 ? "管理完了しました。おつかれさまでした🍵" : "完了したタスク");
   drawSprout(pct);
 }
 function drawSprout(pct){
