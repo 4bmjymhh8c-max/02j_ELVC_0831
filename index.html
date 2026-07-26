@@ -2109,8 +2109,7 @@ async function renderCalendarPanel(el){
     cell.addEventListener("click", ()=>openCalendarDayModal(cell.getAttribute("data-cal-date")));
   });
 }
-
-function openCalendarDayModal(ds){
+async function openCalendarDayModal(ds){
   const d = new Date(ds+"T00:00:00");
   const dow = ["日","月","火","水","木","金","土"][d.getDay()];
   const duty = isDutyDate(ds);
@@ -2129,38 +2128,50 @@ function openCalendarDayModal(ds){
   </div>`;
 
   if(isEditor){
+    bodyEl.innerHTML = infoHtml + `<div class="empty-note">読み込み中…</div>`;
+    document.getElementById("calendarDayModal").classList.add("show");
+
+        // その月のこれまでの当番回数を人ごとに集計(割り振りの参考用)
+    const monthDs = monthDates(d.getFullYear(), d.getMonth()).list;
+    await loadCalendarRange(monthDs);
+    const counts = {};
+    roster.forEach(n=>{ counts[n]=0; });
+    monthDs.forEach(otherDs=>{
+      (calendarAssign[otherDs]||[]).forEach(name=>{ counts[name]=(counts[name]||0)+1; });
+    });
+    
+  // この日を希望している人・すでに割り当て済みの人だけを候補にする
+    const pickList = roster.filter(n=>wanterNames.includes(n) || assigned.includes(n));
+
+    infoHtml += pickList.length ? pickList.map(n=>`
+      <div class="roster-check-row">
+        <input type="checkbox" id="calpick-${n}" ${assigned.includes(n)?"checked":""}>
+        <label for="calpick-${n}">${escapeHtml(n)}${wanterNames.includes(n)?" (希望あり)":""}</label>
+        <span class="roster-count-badge">${counts[n]||0}回</span>
+      </div>`).join("") : `<div class="empty-note">この日を希望している人がいません</div>`;
+    infoHtml += `<button id="calDaySave" style="width:100%; margin-top:12px; border:none; background:var(--leaf-600); color:#fff; border-radius:10px; padding:11px; font-weight:700; cursor:pointer;">この内容で保存</button>`;
+
     infoHtml += roster.map(n=>`
       <div class="roster-check-row">
         <input type="checkbox" id="calpick-${n}" ${assigned.includes(n)?"checked":""}>
         <label for="calpick-${n}">${escapeHtml(n)}${wanterNames.includes(n)?" (希望あり)":""}</label>
+        <span class="roster-count-badge">${counts[n]||0}回</span>
       </div>`).join("");
     infoHtml += `<button id="calDaySave" style="width:100%; margin-top:12px; border:none; background:var(--leaf-600); color:#fff; border-radius:10px; padding:11px; font-weight:700; cursor:pointer;">この内容で保存</button>`;
-  }else{
-    infoHtml += `<div class="empty-note">当番を編集するには編集者パスワードが必要です</div>`;
-  }
-  bodyEl.innerHTML = infoHtml;
 
-  if(isEditor){
+    bodyEl.innerHTML = infoHtml;
     document.getElementById("calDaySave").addEventListener("click", async ()=>{
       const picked = roster.filter(n=>document.getElementById(`calpick-${n}`).checked);
       await saveCalendarDay(ds, picked);
       document.getElementById("calendarDayModal").classList.remove("show");
       renderDutyPanel();
     });
+  }else{
+    infoHtml += `<div class="empty-note">当番を編集するには編集者パスワードが必要です</div>`;
+    bodyEl.innerHTML = infoHtml;
+    document.getElementById("calendarDayModal").classList.add("show");
   }
-  document.getElementById("calendarDayModal").classList.add("show");
 }
-document.getElementById("closeCalDayModal").addEventListener("click", ()=>{
-  document.getElementById("calendarDayModal").classList.remove("show");
-});
-
-/* ---- モード / サブタブ切り替え ---- */
-document.getElementById("modeSwitch").addEventListener("click", async (e)=>{
-  const btn = e.target.closest("button[data-mode]");
-  if(!btn) return;
-  document.querySelectorAll("#modeSwitch button").forEach(b=>b.classList.remove("active"));
-  btn.classList.add("active");
-  const mode = btn.getAttribute("data-mode");
   const isDuty = mode==="duty";
   document.getElementById("checkModeHeader").style.display = isDuty ? "none" : "";
   document.getElementById("dutyModeHeader").style.display = isDuty ? "" : "none";
