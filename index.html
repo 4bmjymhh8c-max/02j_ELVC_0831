@@ -1772,6 +1772,7 @@ async function createDutyBackup(silent){
       roster: roster.slice(),
       specialDates: JSON.parse(JSON.stringify(specialDates)),
       fiscalStartMonth, fiscalStartYear, fiscalEndMonth, fiscalEndYear,
+      fiscalPresets: JSON.parse(JSON.stringify(fiscalPresets)),
       auto: !!silent,
       createdAt: firebase.firestore.FieldValue.serverTimestamp()
     });
@@ -1830,6 +1831,11 @@ async function openDutyRestoreModal(){
                 fiscalEndYear = typeof data.fiscalEndYear==="number" ? data.fiscalEndYear : fiscalEndYear;
           await saveRoster();
           await saveFiscalSettings();
+          await saveFiscalSettings();
+          if(Array.isArray(data.fiscalPresets)){
+            fiscalPresets = data.fiscalPresets;
+            await saveFiscalPresets();
+          }
           await applySpecialDatesSnapshot(data.specialDates || {});
           document.getElementById("dutyRestoreModal").classList.remove("show");
           renderDutyPanel();
