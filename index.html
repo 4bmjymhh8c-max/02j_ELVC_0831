@@ -1184,34 +1184,43 @@ function render(){
     });
   });
   main.querySelectorAll("[data-edit-assignee]").forEach(el=>{
-    el.addEventListener("click", async (e)=>{
-      e.stopPropagation();
-      if(isHistoryMode()) return;
-      const sId=el.getAttribute("data-edit-assignee");
-      const sec=structures[currentTab].find(s=>s.id===sId);
-      const val = prompt(`「${sec.name}」の担当者名を入力してください(空にすると無記名になります)`, sec.assignee||"");
-      if(val===null) return;
-      pushUndo(currentTab);
-      sec.assignee = val.trim();
-      await saveStructure(currentTab);
-      render();
+  el.addEventListener("click", async (e)=>{
+    e.stopPropagation();
+    if(isHistoryMode()) return;
+    const sId=el.getAttribute("data-edit-assignee");
+    const sec=structures[currentTab].find(s=>s.id===sId);
+    const val = prompt(`「${sec.name}」の担当者名を入力してください(空にすると無記名になります)`, sec.assignee||"");
+    if(val===null) return;
+    pushUndo(currentTab);
+    const newAssignee = val.trim();
+    await transactStructure(currentTab, (sections)=>{
+      const s = sections.find(s=>s.id===sId);
+      if(s) s.assignee = newAssignee;
+      return sections;
     });
+    render();
   });
+});
   main.querySelectorAll("[data-edit-task-assignee]").forEach(el=>{
-    el.addEventListener("click", async (e)=>{
-      e.stopPropagation();
-      if(isHistoryMode()) return;
-      const [sId,tId]=el.getAttribute("data-edit-task-assignee").split("|");
-      const sec=structures[currentTab].find(s=>s.id===sId);
-      const task=sec.tasks.find(t=>t.id===tId);
-      const val = prompt("この項目の担当者名を入力してください(空にすると無記名になります)", task.assignee||"");
-      if(val===null) return;
-      pushUndo(currentTab);
-      task.assignee = val.trim();
-      await saveStructure(currentTab);
-      render();
+  el.addEventListener("click", async (e)=>{
+    e.stopPropagation();
+    if(isHistoryMode()) return;
+    const [sId,tId]=el.getAttribute("data-edit-task-assignee").split("|");
+    const sec=structures[currentTab].find(s=>s.id===sId);
+    const task=sec.tasks.find(t=>t.id===tId);
+    const val = prompt("この項目の担当者名を入力してください(空にすると無記名になります)", task.assignee||"");
+    if(val===null) return;
+    pushUndo(currentTab);
+    const newAssignee = val.trim();
+    await transactStructure(currentTab, (sections)=>{
+      const s = sections.find(s=>s.id===sId);
+      const t = s ? s.tasks.find(t=>t.id===tId) : null;
+      if(t) t.assignee = newAssignee;
+      return sections;
     });
+    render();
   });
+});
   main.querySelectorAll("[data-move-section]").forEach(el=>{
     el.addEventListener("click", async (e)=>{
       e.stopPropagation();
@@ -1243,20 +1252,22 @@ function render(){
     });
   });
   main.querySelectorAll("[data-remove-task]").forEach(el=>{
-    el.addEventListener("click", async (e)=>{
-      e.stopPropagation();
-      if(isHistoryMode()) return;
-      const [sId,tId]=el.getAttribute("data-remove-task").split("|");
-      pushUndo(currentTab);
-      const sec=structures[currentTab].find(s=>s.id===sId);
-      sec.tasks = sec.tasks.filter(t=>t.id!==tId);
-      delete todayChecked[tId];
-      checkedMap = todayChecked;
-      await saveStructure(currentTab);
-      await saveChecks(currentTab);
-      render();
+  el.addEventListener("click", async (e)=>{
+    e.stopPropagation();
+    if(isHistoryMode()) return;
+    const [sId,tId]=el.getAttribute("data-remove-task").split("|");
+    pushUndo(currentTab);
+    await transactStructure(currentTab, (sections)=>{
+      const sec = sections.find(s=>s.id===sId);
+      if(sec) sec.tasks = sec.tasks.filter(t=>t.id!==tId);
+      return sections;
     });
+    delete todayChecked[tId];
+    checkedMap = todayChecked;
+    await saveChecks(currentTab);
+    render();
   });
+});
   main.querySelectorAll("[data-del-section]").forEach(el=>{
     el.addEventListener("click", async (e)=>{
       e.stopPropagation();
@@ -1275,22 +1286,25 @@ function render(){
     });
   });
   main.querySelectorAll("[data-add-btn]").forEach(btn=>{
-    btn.addEventListener("click", async (e)=>{
-      e.stopPropagation();
-      if(isHistoryMode()) return;
-      const sId=btn.getAttribute("data-add-btn");
-      const input=main.querySelector(`[data-add-input="${sId}"]`);
-      const assigneeInput=main.querySelector(`[data-add-assignee="${sId}"]`);
-      const val=input.value.trim();
-      if(!val) return;
-      pushUndo(currentTab);
-      const sec=structures[currentTab].find(s=>s.id===sId);
-      sec.tasks.push({ id:genId("t"), text:val, assignee: assigneeInput ? assigneeInput.value.trim() : "" });
-      await saveStructure(currentTab);
-      render();
-      showToast("タスクを追加しました");
+  btn.addEventListener("click", async (e)=>{
+    e.stopPropagation();
+    if(isHistoryMode()) return;
+    const sId=btn.getAttribute("data-add-btn");
+    const input=main.querySelector(`[data-add-input="${sId}"]`);
+    const assigneeInput=main.querySelector(`[data-add-assignee="${sId}"]`);
+    const val=input.value.trim();
+    if(!val) return;
+    pushUndo(currentTab);
+    const newTask = { id:genId("t"), text:val, assignee: assigneeInput ? assigneeInput.value.trim() : "" };
+    await transactStructure(currentTab, (sections)=>{
+      const sec = sections.find(s=>s.id===sId);
+      if(sec) sec.tasks.push(newTask);
+      return sections;
     });
+    render();
+    showToast("タスクを追加しました");
   });
+});
   main.querySelectorAll("[data-add-input], [data-add-assignee]").forEach(input=>{
     input.addEventListener("keydown", (e)=>{
       if(e.key==="Enter"){
