@@ -1637,20 +1637,41 @@ document.getElementById("closeRosterModal").addEventListener("click", ()=>{
 
 /* ---- 年度設定(スコアの集計期間) ---- */
 let fiscalStartMonth = 4; // 1-12。既定は4月始まり
+let fiscalStartYear = 2000;  // 期間の長さを計算するための基準値(実際の暦年とは無関係)
+let fiscalEndMonth = 3;      // 1-12
+let fiscalEndYear = 2001;    // 期間の長さを計算するための基準値
 function fiscalSettingsRef(){ return db.collection("duty_settings").doc("fiscal"); }
 async function loadFiscalSettings(){
   try{
     const snap = await fiscalSettingsRef().get();
-    if(snap.exists && typeof snap.data().startMonth==="number"){
-      fiscalStartMonth = snap.data().startMonth;
+    const data = snap.exists ? snap.data() : null;
+    if(data && typeof data.startMonth==="number"){
+      fiscalStartMonth = data.startMonth;
+      fiscalStartYear = typeof data.startYear==="number" ? data.startYear : 2000;
+      if(typeof data.endMonth==="number" && typeof data.endYear==="number"){
+        fiscalEndMonth = data.endMonth;
+        fiscalEndYear = data.endYear;
+      }else{
+        // 旧データ(終了月が未設定)からの移行: これまで通り12か月分の期間として補完
+        fiscalEndMonth = fiscalStartMonth===1 ? 12 : fiscalStartMonth-1;
+        fiscalEndYear = fiscalStartMonth===1 ? fiscalStartYear : fiscalStartYear+1;
+      }
     }else{
-      await fiscalSettingsRef().set({ startMonth: fiscalStartMonth });
+      await saveFiscalSettings();
     }
   }catch(e){ /* オフライン時などは既定値のまま */ }
 }
 async function saveFiscalSettings(){
-  try{ await fiscalSettingsRef().set({ startMonth: fiscalStartMonth }); }catch(e){ showToast("年度設定の保存に失敗しました"); }
+  try{
+    await fiscalSettingsRef().set({
+      startMonth: fiscalStartMonth,
+      startYear: fiscalStartYear,
+      endMonth: fiscalEndMonth,
+      endYear: fiscalEndYear
+    });
+  }catch(e){ showToast("年度設定の保存に失敗しました"); }
 }
+
 function fiscalYearForDate(dateStr){
   const d = new Date(dateStr+"T00:00:00");
   const y = d.getFullYear(), m = d.getMonth()+1;
