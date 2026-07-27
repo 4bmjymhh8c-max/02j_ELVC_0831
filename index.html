@@ -1158,17 +1158,20 @@ function render(){
       document.getElementById("addSectionForm").classList.remove("show");
     });
     document.getElementById("confirmAddSection").addEventListener("click", async ()=>{
-      const nameInput=document.getElementById("newSectionName");
-      const assigneeInput=document.getElementById("newSectionAssignee");
-      const name=nameInput.value.trim();
-      if(!name){ showToast("場所の名前を入力してください"); return; }
-      pushUndo(currentTab);
-      structures[currentTab].push({ id:genId("s"), name, assignee:assigneeInput.value.trim(), tasks:[] });
-      await saveStructure(currentTab);
-      openSections[currentTab+":"+structures[currentTab][structures[currentTab].length-1].id]=true;
-      render();
-      showToast("場所を追加しました");
-    });
+  const nameInput=document.getElementById("newSectionName");
+  const assigneeInput=document.getElementById("newSectionAssignee");
+  const name=nameInput.value.trim();
+  if(!name){ showToast("場所の名前を入力してください"); return; }
+  pushUndo(currentTab);
+  const newSection = { id:genId("s"), name, assignee:assigneeInput.value.trim(), tasks:[] };
+  await transactStructure(currentTab, (sections)=>{
+    sections.push(newSection);
+    return sections;
+  });
+  openSections[currentTab+":"+newSection.id]=true;
+  render();
+  showToast("場所を追加しました");
+});
   }
 
   // bindings
