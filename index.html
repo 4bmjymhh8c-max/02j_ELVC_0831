@@ -1222,20 +1222,21 @@ function render(){
   });
 });
   main.querySelectorAll("[data-move-section]").forEach(el=>{
-    el.addEventListener("click", async (e)=>{
-      e.stopPropagation();
-      if(isHistoryMode()) return;
-      const [sId,dir]=el.getAttribute("data-move-section").split("|");
-      const arr=structures[currentTab];
-      const i=arr.findIndex(s=>s.id===sId);
+  el.addEventListener("click", async (e)=>{
+    e.stopPropagation();
+    if(isHistoryMode()) return;
+    const [sId,dir]=el.getAttribute("data-move-section").split("|");
+    pushUndo(currentTab);
+    await transactStructure(currentTab, (sections)=>{
+      const i=sections.findIndex(s=>s.id===sId);
       const j = dir==="up" ? i-1 : i+1;
-      if(j<0 || j>=arr.length) return;
-      pushUndo(currentTab);
-      [arr[i],arr[j]]=[arr[j],arr[i]];
-      await saveStructure(currentTab);
-      render();
+      if(i<0 || j<0 || j>=sections.length) return sections;
+      [sections[i],sections[j]]=[sections[j],sections[i]];
+      return sections;
     });
+    render();
   });
+});
     main.querySelectorAll("[data-toggle-section]").forEach(el=>{
     el.addEventListener("click", async (e)=>{
       e.stopPropagation();
