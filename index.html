@@ -792,6 +792,24 @@ async function saveStructure(tab){
     flashConnError("保存に失敗しました。通信を確認してください");
   }
 }
+async function transactStructure(tab, mutateFn){
+  if(!firebaseReady){ showConfigWarningOnce(); return; }
+  try{
+    await db.runTransaction(async (tx)=>{
+      const snap = await tx.get(structureRef(tab));
+      const current = (snap.exists && snap.data() && snap.data().sections) ? snap.data().sections : [];
+      const updated = mutateFn(JSON.parse(JSON.stringify(current)));
+      tx.set(structureRef(tab), {
+        sections: updated,
+        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+      });
+      structures[tab] = updated;
+    });
+    scheduleAutoBackup(tab);
+  }catch(e){
+    flashConnError("保存に失敗しました。通信を確認してください");
+  }
+}
 async function saveChecks(tab){
   if(!firebaseReady){ showConfigWarningOnce(); return; }
   const stats = countStats(tab, todayChecked);
