@@ -1418,7 +1418,10 @@ document.getElementById("tabNav").addEventListener("click", async (e)=>{
   await loadTab(currentTab);
   render();
 });
-document.getElementById("undoBtn").addEventListener("click", undo);
+document.getElementById("undoBtn").addEventListener("click", ()=>{
+  if(!confirm("直前の操作を取り消します。よろしいですか？")) return;
+  undo();
+});
 document.getElementById("backupBtn").addEventListener("click", ()=>createBackup(false));
 document.getElementById("restoreBtn").addEventListener("click", ()=>{
   if(!unlockAdmin()) return;
@@ -1656,6 +1659,7 @@ async function openDutyRestoreModal(){
 }
 document.getElementById("dutyUndoBtn").addEventListener("click", ()=>{
   if(!unlockAdmin()) return;
+  if(!confirm("直前の操作を取り消します。よろしいですか？")) return;
   undoDuty();
 });
 document.getElementById("dutyBackupBtn").addEventListener("click", ()=>{
@@ -1990,8 +1994,8 @@ async function renderScorePanel(el){
       スコア
       <span>
         <button class="lock-btn" id="adminLockBtn">${isAdmin?"🔓 管理者モード解除":"🔒 管理者パスワード入力"}</button>
-        <button class="lock-btn" id="rosterBtn">🔒 名簿を管理</button>
-        <button class="lock-btn" id="specialDateBtn">🔒 特例日を管理</button>
+        ${isAdmin ? `<button class="lock-btn" id="rosterBtn">🔒 名簿を管理</button>` : ``}
+        ${isAdmin ? `<button class="lock-btn" id="specialDateBtn">🔒 特例日を管理</button>` : ``}
         ${isAdmin ? `<button class="lock-btn" id="purgeOldDataBtn">🗑 過去データを削除</button>` : ``}
       </span>
     </div>
@@ -2012,10 +2016,13 @@ async function renderScorePanel(el){
   document.getElementById("adminLockBtn").addEventListener("click", ()=>{
     if(isAdmin) lockAdmin(); else unlockAdmin();
   });
-  document.getElementById("specialDateBtn").addEventListener("click", ()=>{
+  const specialDateBtnEl = document.getElementById("specialDateBtn");
+if(specialDateBtnEl){
+  specialDateBtnEl.addEventListener("click", ()=>{
     if(!unlockAdmin()) return;
     openSpecialDateModal();
   });
+}
   const purgeBtn = document.getElementById("purgeOldDataBtn");
 if(purgeBtn){
   purgeBtn.addEventListener("click", async ()=>{
@@ -2033,10 +2040,13 @@ if(purgeBtn){
     }
   });
 }
-  document.getElementById("rosterBtn").addEventListener("click", ()=>{
+  const rosterBtnEl = document.getElementById("rosterBtn");
+if(rosterBtnEl){
+  rosterBtnEl.addEventListener("click", ()=>{
     if(!unlockAdmin()) return;
     openRosterModal();
   });
+}
   document.getElementById("fySelect").addEventListener("change", (e)=>{
     selectedFiscalYear = parseInt(e.target.value,10);
     renderScorePanel(el);
