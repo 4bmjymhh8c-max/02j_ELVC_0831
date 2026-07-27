@@ -1270,22 +1270,24 @@ function render(){
   });
 });
   main.querySelectorAll("[data-del-section]").forEach(el=>{
-    el.addEventListener("click", async (e)=>{
-      e.stopPropagation();
-      if(isHistoryMode()) return;
-      const sId=el.getAttribute("data-del-section");
-      const sec=structures[currentTab].find(s=>s.id===sId);
-      if(!confirm(`「${sec.name}」を削除します。よろしいですか？`)) return;
-      pushUndo(currentTab);
-      structures[currentTab] = structures[currentTab].filter(s=>s.id!==sId);
-      sec.tasks.forEach(t=>delete todayChecked[t.id]);
-      checkedMap = todayChecked;
-      await saveStructure(currentTab);
-      await saveChecks(currentTab);
-      render();
-      showToast("場所を削除しました");
+  el.addEventListener("click", async (e)=>{
+    e.stopPropagation();
+    if(isHistoryMode()) return;
+    const sId=el.getAttribute("data-del-section");
+    const sec=structures[currentTab].find(s=>s.id===sId);
+    if(!confirm(`「${sec.name}」を削除します。よろしいですか？`)) return;
+    pushUndo(currentTab);
+    const removedTaskIds = sec.tasks.map(t=>t.id);
+    await transactStructure(currentTab, (sections)=>{
+      return sections.filter(s=>s.id!==sId);
     });
+    removedTaskIds.forEach(tId=>delete todayChecked[tId]);
+    checkedMap = todayChecked;
+    await saveChecks(currentTab);
+    render();
+    showToast("場所を削除しました");
   });
+});
   main.querySelectorAll("[data-add-btn]").forEach(btn=>{
   btn.addEventListener("click", async (e)=>{
     e.stopPropagation();
