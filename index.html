@@ -825,6 +825,27 @@ async function saveChecks(tab){
     flashConnError("保存に失敗しました。通信を確認してください");
   }
 }
+  async function transactChecks(tab, mutateFn){
+  if(!firebaseReady){ showConfigWarningOnce(); return; }
+  try{
+    await db.runTransaction(async (tx)=>{
+      const snap = await tx.get(checksRef(tab, todayStr));
+      const current = (snap.exists && snap.data() && snap.data().data) ? snap.data().data : {};
+      const updated = mutateFn(JSON.parse(JSON.stringify(current)));
+      const stats = countStats(tab, updated);
+      tx.set(checksRef(tab, todayStr), {
+        data: updated,
+        stats: stats,
+        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+      });
+      todayChecked = updated;
+      dateStats[todayStr] = stats;
+    });
+    scheduleAutoBackup(tab);
+  }catch(e){
+    flashConnError("保存に失敗しました。通信を確認してください");
+  }
+}
 function showConfigWarningOnce(){
   if(showConfigWarningOnce._shown) return;
   showConfigWarningOnce._shown = true;
@@ -1176,16 +1197,18 @@ function render(){
 
   // bindings
   main.querySelectorAll("[data-id]").forEach(el=>{
-    el.addEventListener("click", async ()=>{
-      if(isHistoryMode()) return;
-      const id=el.getAttribute("data-id");
-      pushUndo(currentTab);
-      todayChecked[id]=!todayChecked[id];
-      checkedMap = todayChecked;
-      await saveChecks(currentTab);
-      render();
+  el.addEventListener("click", async ()=>{
+    if(isHistoryMode()) return;
+    const id=el.getAttribute("data-id");
+    pushUndo(currentTab);
+    await transactChecks(currentTab, (checks)=>{
+      checks[id] = !checks[id];
+      return checks;
     });
+    checkedMap = todayChecked;
+    render();
   });
+});
   main.querySelectorAll("[data-edit-assignee]").forEach(el=>{
   el.addEventListener("click", async (e)=>{
     e.stopPropagation();
@@ -1241,20 +1264,23 @@ function render(){
   });
 });
     main.querySelectorAll("[data-toggle-section]").forEach(el=>{
-    el.addEventListener("click", async (e)=>{
-      e.stopPropagation();
-      if(isHistoryMode()) return;
-      const sId=el.getAttribute("data-toggle-section");
-      const sec=structures[currentTab].find(s=>s.id===sId);
-      if(sec.tasks.length===0) return;
-      pushUndo(currentTab);
-      const allDone = sec.tasks.every(t=>todayChecked[t.id]);
-      sec.tasks.forEach(t=>{ todayChecked[t.id] = !allDone; });
-      checkedMap = todayChecked;
-      await saveChecks(currentTab);
-      render();
+  el.addEventListener("click", async (e)=>{
+    e.stopPropagation();
+    if(isHistoryMode()) return;
+    const sId=el.getAttribute("data-toggle-section");
+    const sec=structures[currentTab].find(s=>s.id===sId);
+    if(sec.tasks.length===0) return;
+    pushUndo(currentTab);
+    const taskIds = sec.tasks.map(t=>t.id);
+    await transactChecks(currentTab, (checks)=>{
+      const allDone = taskIds.every(tId=>checks[tId]);
+      taskIds.forEach(tId=>{ checks[tId] = !allDone; });
+      return checks;
     });
+    checkedMap = todayChecked;
+    render();
   });
+});
   main.querySelectorAll("[data-remove-task]").forEach(el=>{
   el.addEventListener("click", async (e)=>{
     e.stopPropagation();
