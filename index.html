@@ -469,7 +469,8 @@
 <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-firestore-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-auth-compat.js"></script>
-
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script>
 /* =========================================================================
    Firebase 設定
@@ -676,12 +677,31 @@ function escapeHtml(str){
     .replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;")
     .replace(/"/g,"&quot;").replace(/'/g,"&#39;");
 }
-function printCalendarMonth(idx){
-  document.body.classList.add("printing-calendar");
-  document.querySelectorAll(".cal-month-block").forEach(el=>el.classList.remove("print-target"));
-  document.getElementById("calMonthBlock"+idx).classList.add("print-target");
-  window.print();
-  setTimeout(()=>{ document.body.classList.remove("printing-calendar"); }, 500);
+  async function downloadCalendarMonthPdf(idx){
+  const target = document.getElementById("calMonthBlock"+idx);
+  if(!target) return;
+  showToast("PDFを作成しています…");
+  const printBtn = target.querySelector("[data-print-month]");
+  try{
+    if(printBtn) printBtn.style.visibility = "hidden";
+    const canvas = await html2canvas(target, { scale:2, backgroundColor:"#ffffff", useCORS:true });
+    if(printBtn) printBtn.style.visibility = "";
+    const imgData = canvas.toDataURL("image/png");
+    const { jsPDF } = window.jspdf;
+    const pdf = new jsPDF({ orientation:"portrait", unit:"pt", format:"a4" });
+    const pageWidth = pdf.internal.pageSize.getWidth();
+    const pageHeight = pdf.internal.pageSize.getHeight();
+    const ratio = Math.min(pageWidth/canvas.width, pageHeight/canvas.height);
+    const imgW = canvas.width*ratio;
+    const imgH = canvas.height*ratio;
+    pdf.addImage(imgData, "PNG", (pageWidth-imgW)/2, 30, imgW, imgH);
+    const fileLabel = `${target.dataset.year}年${target.dataset.month}月`;
+    pdf.save(`${fileLabel}_当番カレンダー.pdf`);
+    showToast("PDFを保存しました");
+  }catch(e){
+    if(printBtn) printBtn.style.visibility = "";
+    showToast("PDFの作成に失敗しました");
+  }
 }
 /* URLの自動リンク化: HTMLエスケープ後にURLをaタグへ置換 */
 function linkify(str){
@@ -1443,33 +1463,63 @@ async function openRestoreModal(){
       const label = `${ts.getMonth()+1}/${ts.getDate()} ${pad(ts.getHours())}:${pad(ts.getMinutes())} ${data.auto ? "(自動保存)" : "(手動保存)"}`;
       const item=document.createElement("div");
       item.className="backup-item";
-      item.innerHTML=`<div class="info">${label}<small>復元すると今の内容と入れ替わります</small></div><button data-restore-key="${doc.id}">復元</button>`;
+      item.innerHTML=`<div class="info">${label}<small>タップして内容を確認できます</small></div><button data-preview-key="${doc.id}">プレビュー</button>`;
       listEl.appendChild(item);
     });
-    listEl.querySelectorAll("[data-restore-key]").forEach(btn=>{
+    listEl.querySelectorAll("[data-preview-key]").forEach(btn=>{
       btn.addEventListener("click", async ()=>{
-        const key=btn.getAttribute("data-restore-key");
-        if(!confirm("このバックアップの内容で復元します。今の内容は上書きされます。よろしいですか？")) return;
+        const key=btn.getAttribute("data-preview-key");
+        listEl.innerHTML=`<div class="empty-note">読み込み中…</div>`;
         try{
           const doc = await backupsCol(currentTab).doc(key).get();
-          const payload = doc.data();
-          pushUndo(currentTab);
-          structures[currentTab]=payload.structure;
-          todayChecked = (payload.day===todayStr) ? payload.checks : {};
-          checkedMap = todayChecked;
-          await saveStructure(currentTab);
-          await saveChecks(currentTab);
-          render();
-          document.getElementById("restoreModal").classList.remove("show");
-          showToast("復元しました");
+          renderBackupPreview(doc.data());
         }catch(e){
-          flashConnError("復元に失敗しました。通信を確認してください");
+          listEl.innerHTML=`<div class="empty-note">読み込みに失敗しました</div>`;
         }
       });
     });
   }catch(e){
     listEl.innerHTML=`<div class="empty-note">読み込みに失敗しました<br><small style="word-break:break-all;">${escapeHtml(e && e.message ? e.message : String(e))}</small></div>`;
   }
+}
+
+function renderBackupPreview(payload){
+  const listEl=document.getElementById("backupList");
+  const sections = payload.structure || [];
+  const totalTasks = sections.reduce((sum,s)=>sum+s.tasks.length,0);
+  const previewHtml = sections.map(s=>`
+    <div style="margin-bottom:10px;">
+      <div style="font-weight:700; color:var(--soil-800);">${escapeHtml(s.name)}${s.assignee?` <span style="font-weight:500; color:var(--bark); font-size:11.5px;">(担当: ${escapeHtml(s.assignee)})</span>`:``}</div>
+      <div style="font-size:12px; color:var(--ink-soft); line-height:1.6;">
+        ${s.tasks.length ? s.tasks.map(t=>`・${escapeHtml(t.text)}`).join("<br>") : "(タスクなし)"}
+      </div>
+    </div>
+  `).join("");
+  listEl.innerHTML = `
+    <div class="empty-note" style="text-align:left; padding:4px 2px 12px;">場所数: ${sections.length} / タスク数: ${totalTasks}</div>
+    <div style="max-height:40vh; overflow-y:auto; margin-bottom:12px;">${previewHtml || `<div class="empty-note">中身が空です</div>`}</div>
+    <div style="display:flex; gap:8px;">
+      <button id="backupPreviewBack" style="flex:1; border:none; background:#efece2; color:var(--ink-soft); border-radius:10px; padding:11px; font-weight:600; cursor:pointer;">一覧に戻る</button>
+      <button id="backupPreviewRestore" style="flex:1; border:none; background:var(--leaf-600); color:#fff; border-radius:10px; padding:11px; font-weight:600; cursor:pointer;">この内容で復元する</button>
+    </div>
+  `;
+  document.getElementById("backupPreviewBack").addEventListener("click", ()=>openRestoreModal());
+  document.getElementById("backupPreviewRestore").addEventListener("click", async ()=>{
+    if(!confirm("このバックアップの内容で復元します。今の内容は上書きされます。よろしいですか？")) return;
+    try{
+      pushUndo(currentTab);
+      structures[currentTab]=payload.structure;
+      todayChecked = (payload.day===todayStr) ? payload.checks : {};
+      checkedMap = todayChecked;
+      await saveStructure(currentTab);
+      await saveChecks(currentTab);
+      render();
+      document.getElementById("restoreModal").classList.remove("show");
+      showToast("復元しました");
+    }catch(e){
+      flashConnError("復元に失敗しました。通信を確認してください");
+    }
+  });
 }
 
 /* ---------- events ---------- */
@@ -1994,13 +2044,14 @@ async function renderPrefPanel(el){
 
   const nextRows = nextDates.map(ds=>prefRowHtml(ds, true)).join("");
   const nextBlock = `
-    <div class="pref-month-block">
-      <div class="pref-month-head">
-        <div class="name">${nextM.year}年${nextM.month+1}月 <span class="pref-month-tag next">来月・希望入力</span></div>
-      </div>
-      <div class="pref-month-sub">当番が必要な日に希望を入力できます</div>
-      ${nextRows || `<div class="empty-note">対象の日がありません</div>`}
-    </div>`;
+  <div class="pref-month-block">
+    <div class="pref-month-head">
+      <div class="name">${nextM.year}年${nextM.month+1}月 <span class="pref-month-tag next">来月・希望入力</span></div>
+      <button class="lock-btn" id="prefAllBtn">✅ 全日程可能</button>
+    </div>
+    <div class="pref-month-sub">当番が必要な日に希望を入力できます</div>
+    ${nextRows || `<div class="empty-note">対象の日がありません</div>`}
+  </div>`;
 
   const thisRows = thisDates.map(ds=>prefRowHtml(ds, false)).join("");
   const thisBlock = `
@@ -2014,6 +2065,22 @@ async function renderPrefPanel(el){
 
   el.innerHTML = meBar + `<div class="duty-section-title">休日管理 希望表</div>` + nextBlock + thisBlock;
   document.getElementById("changeNameBtn").addEventListener("click", ()=>openNameModal());
+  document.getElementById("prefAllBtn").addEventListener("click", async ()=>{
+  if(!myName){ openNameModal(()=>renderPrefPanel(el)); return; }
+  if(!confirm(`${nextM.year}年${nextM.month+1}月の当番が必要な日、すべてに希望を入れます。よろしいですか？`)) return;
+  try{
+    await Promise.all(nextDates.map(async ds=>{
+      const current = preferences[ds] || {};
+      const next = Object.assign({}, current, { [myName]: true });
+      preferences[ds] = next;
+      await preferencesCol().doc(ds).set({ wants: next });
+    }));
+    showToast("全日程に希望を入れました");
+    renderPrefPanel(el);
+  }catch(e){
+    showToast("保存に失敗しました");
+  }
+});
   el.querySelectorAll("[data-pref-date]").forEach(btn=>{
     btn.addEventListener("click", ()=>togglePreference(btn.getAttribute("data-pref-date")));
   });
@@ -2069,7 +2136,7 @@ async function renderScorePanel(el){
         ${fyList.map(y=>`<option value="${y}" ${y===fy?"selected":""}>${y}年度</option>`).join("")}
       </select>
       <span style="font-size:11.5px; color:var(--ink-soft);">(${periodLabel})</span>
-      <button id="fiscalEditBtn" class="lock-btn">🔒 開始月を変更</button>
+      ${isAdmin ? `<button id="fiscalEditBtn" class="lock-btn">🔒 開始月を変更</button>` : ``}
     </div>
     <table class="score-table">
       <thead><tr><th>名前</th><th>回数</th><th>スコア</th></tr></thead>
@@ -2115,7 +2182,9 @@ if(rosterBtnEl){
     selectedFiscalYear = parseInt(e.target.value,10);
     renderScorePanel(el);
   });
-  document.getElementById("fiscalEditBtn").addEventListener("click", async ()=>{
+  const fiscalEditBtnEl = document.getElementById("fiscalEditBtn");
+if(fiscalEditBtnEl){
+  fiscalEditBtnEl.addEventListener("click", async ()=>{
     if(!unlockAdmin()) return;
     const val = prompt("年度の開始月を入力してください(1〜12。例: 4月始まりなら 4)", String(fiscalStartMonth));
     if(val===null) return;
@@ -2128,6 +2197,7 @@ if(rosterBtnEl){
     showToast("年度の開始月を変更しました");
     renderScorePanel(el);
   });
+}
 }
 
 /* ---- 特別な日 管理モーダル ---- */
@@ -2223,8 +2293,8 @@ async function renderCalendarPanel(el){
 
     months.forEach((m, mIdx)=>{
     const { list } = monthDates(m.year, m.month);
-    html += `<div class="cal-month-block" id="calMonthBlock${mIdx}">`;
-    html += `<div class="cal-month-title">${m.year}年 ${m.month+1}月 <button class="lock-btn" data-print-month="${mIdx}">🖨 印刷</button></div>`;
+    html += `<div class="cal-month-block" id="calMonthBlock${mIdx}" data-year="${m.year}" data-month="${m.month+1}">`;
+    html += `<div class="cal-month-title">${m.year}年 ${m.month+1}月 <button class="lock-btn" data-print-month="${mIdx}">📄 PDF保存</button></div>`;
     html += `<div class="cal-grid">`;
     ["日","月","火","水","木","金","土"].forEach(d=>{ html += `<div class="cal-dow">${d}</div>`; });
     const firstDow = new Date(m.year,m.month,1).getDay();
@@ -2249,7 +2319,7 @@ async function renderCalendarPanel(el){
   el.querySelectorAll("[data-print-month]").forEach(btn=>{
   btn.addEventListener("click", (e)=>{
     e.stopPropagation();
-    printCalendarMonth(btn.getAttribute("data-print-month"));
+    downloadCalendarMonthPdf(btn.getAttribute("data-print-month"));
   });
 });
 
