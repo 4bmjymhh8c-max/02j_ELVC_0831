@@ -1672,10 +1672,27 @@ async function saveFiscalSettings(){
   }catch(e){ showToast("年度設定の保存に失敗しました"); }
 }
 
+function fiscalDurationMonths(){
+  const startAbs = fiscalStartYear*12 + (fiscalStartMonth-1);
+  const endAbs = fiscalEndYear*12 + (fiscalEndMonth-1);
+  let d = endAbs - startAbs + 1;
+  if(d<=0) d += 12; // 設定不備の保険(終了が開始より前になっている場合)
+  return d;
+}
 function fiscalYearForDate(dateStr){
   const d = new Date(dateStr+"T00:00:00");
   const y = d.getFullYear(), m = d.getMonth()+1;
-  return (m >= fiscalStartMonth) ? y : y-1;
+  const duration = fiscalDurationMonths();
+  const dateAbs = y*12 + (m-1);
+  const startThis = y*12 + (fiscalStartMonth-1);
+  const startPrev = (y-1)*12 + (fiscalStartMonth-1);
+  if(dateAbs >= startThis && dateAbs < startThis+duration) return y;
+  if(dateAbs >= startPrev && dateAbs < startPrev+duration) return y-1;
+  return null; // 期間の対象外(集計期間が12か月未満のときの隙間)
+}
+function addMonthsYM(year, month, delta){
+  const abs = year*12 + (month-1) + delta;
+  return { year: Math.floor(abs/12), month: (abs%12)+1 };
 }
 
 /* ---- 当番管理(名簿・特別な日・年度設定)の 元に戻す / バックアップ / 復元 ---- */
@@ -1684,7 +1701,7 @@ function dutySnapshot(){
   return {
     roster: roster.slice(),
     specialDates: JSON.parse(JSON.stringify(specialDates)),
-    fiscalStartMonth
+    fiscalStartMonth, fiscalStartYear, fiscalEndMonth, fiscalEndYear
   };
 }
 function pushDutyUndo(){
@@ -1711,6 +1728,9 @@ async function undoDuty(){
   const prev = dutyUndoStack.pop();
   roster = prev.roster;
   fiscalStartMonth = prev.fiscalStartMonth;
+  fiscalStartYear = prev.fiscalStartYear;
+  fiscalEndMonth = prev.fiscalEndMonth;
+  fiscalEndYear = prev.fiscalEndYear;
   await saveRoster();
   await saveFiscalSettings();
   await applySpecialDatesSnapshot(prev.specialDates);
@@ -1725,7 +1745,7 @@ async function createDutyBackup(silent){
     await dutyBackupsCol().add({
       roster: roster.slice(),
       specialDates: JSON.parse(JSON.stringify(specialDates)),
-      fiscalStartMonth,
+      fiscalStartMonth, fiscalStartYear, fiscalEndMonth, fiscalEndYear,
       auto: !!silent,
       createdAt: firebase.firestore.FieldValue.serverTimestamp()
     });
@@ -1779,6 +1799,9 @@ async function openDutyRestoreModal(){
           pushDutyUndo();
           roster = data.roster || roster;
           fiscalStartMonth = typeof data.fiscalStartMonth==="number" ? data.fiscalStartMonth : fiscalStartMonth;
+                fiscalStartYear = typeof data.fiscalStartYear==="number" ? data.fiscalStartYear : fiscalStartYear;
+                fiscalEndMonth = typeof data.fiscalEndMonth==="number" ? data.fiscalEndMonth : fiscalEndMonth;
+                fiscalEndYear = typeof data.fiscalEndYear==="number" ? data.fiscalEndYear : fiscalEndYear;
           await saveRoster();
           await saveFiscalSettings();
           await applySpecialDatesSnapshot(data.specialDates || {});
@@ -2114,10 +2137,16 @@ async function renderScorePanel(el){
   const allCal = await loadAllCalendarForScore();
 
   const fyOfCurrent = fiscalYearForDate(dateKey(new Date()));
-  const fySet = new Set([fyOfCurrent]);
-  Object.keys(allCal).forEach(ds=>fySet.add(fiscalYearForDate(ds)));
-  const fyList = Array.from(fySet).sort((a,b)=>b-a);
-  const fy = (selectedFiscalYear!==null && fySet.has(selectedFiscalYear)) ? selectedFiscalYear : fyOfCurrent;
+const fySet = new Set();
+if(fyOfCurrent!==null) fySet.add(fyOfCurrent);
+Object.keys(allCal).forEach(ds=>{
+  const fy_ = fiscalYearForDate(ds);
+  if(fy_!==null) fySet.add(fy_);
+});
+const fyList = Array.from(fySet).sort((a,b)=>b-a);
+const fy = (selectedFiscalYear!==null && fySet.has(selectedFiscalYear))
+  ? selectedFiscalYear
+  : (fyOfCurrent!==null ? fyOfCurrent : (fyList[0] ?? new Date().getFullYear()));
 
   const scores = {}, counts = {};
   roster.forEach(n=>{ scores[n]=0; counts[n]=0; });
@@ -2138,8 +2167,9 @@ async function renderScorePanel(el){
       <td><b>${scores[name]}</b>pt</td>
     </tr>`).join("");
 
-  const endMonth = fiscalStartMonth===1 ? 12 : fiscalStartMonth-1;
-  const periodLabel = `${fy}年${fiscalStartMonth}月 〜 ${fy+1}年${endMonth}月`;
+  const duration = fiscalDurationMonths();
+  const endYM = addMonthsYM(fy, fiscalStartMonth, duration-1);
+  const periodLabel = `${fy}年${fiscalStartMonth}月 〜 ${endYM.year}年${endYM.month}月`;
 
   el.innerHTML = `
     <div class="duty-section-title">
@@ -2157,7 +2187,8 @@ async function renderScorePanel(el){
         ${fyList.map(y=>`<option value="${y}" ${y===fy?"selected":""}>${y}年度</option>`).join("")}
       </select>
       <span style="font-size:11.5px; color:var(--ink-soft);">(${periodLabel})</span>
-      ${isAdmin ? `<button id="fiscalEditBtn" class="lock-btn">🔒 開始月を変更</button>` : ``}
+      ${isAdmin ? `<button id="fiscalStartEditBtn" class="lock-btn">🔒 開始年月を変更</button>` : ``}
+      ${isAdmin ? `<button id="fiscalEndEditBtn" class="lock-btn">🔒 終了年月を変更</button>` : ``}
     </div>
     <table class="score-table">
       <thead><tr><th>名前</th><th>回数</th><th>スコア</th></tr></thead>
@@ -2203,19 +2234,39 @@ if(rosterBtnEl){
     selectedFiscalYear = parseInt(e.target.value,10);
     renderScorePanel(el);
   });
-  const fiscalEditBtnEl = document.getElementById("fiscalEditBtn");
-if(fiscalEditBtnEl){
-  fiscalEditBtnEl.addEventListener("click", async ()=>{
+  const fiscalStartEditBtnEl = document.getElementById("fiscalStartEditBtn");
+if(fiscalStartEditBtnEl){
+  fiscalStartEditBtnEl.addEventListener("click", async ()=>{
     if(!unlockAdmin()) return;
-    const val = prompt("年度の開始月を入力してください(1〜12。例: 4月始まりなら 4)", String(fiscalStartMonth));
+    const val = prompt("開始の年月を「年-月」の形式で入力してください(例: 2026-4)", `${fiscalStartYear}-${fiscalStartMonth}`);
     if(val===null) return;
-    const m = parseInt(val,10);
-    if(isNaN(m) || m<1 || m>12){ showToast("1〜12の数字で入力してください"); return; }
+    const parts = val.split("-").map(s=>parseInt(String(s).trim(),10));
+    const y=parts[0], m=parts[1];
+    if(isNaN(y) || isNaN(m) || m<1 || m>12){ showToast("「年-月」の形式で入力してください(例: 2026-4)"); return; }
     pushDutyUndo();
+    fiscalStartYear = y;
     fiscalStartMonth = m;
     await saveFiscalSettings();
     scheduleDutyAutoBackup();
-    showToast("年度の開始月を変更しました");
+    showToast("開始年月を変更しました");
+    renderScorePanel(el);
+  });
+}
+const fiscalEndEditBtnEl = document.getElementById("fiscalEndEditBtn");
+if(fiscalEndEditBtnEl){
+  fiscalEndEditBtnEl.addEventListener("click", async ()=>{
+    if(!unlockAdmin()) return;
+    const val = prompt("終了の年月を「年-月」の形式で入力してください(例: 2027-3)", `${fiscalEndYear}-${fiscalEndMonth}`);
+    if(val===null) return;
+    const parts = val.split("-").map(s=>parseInt(String(s).trim(),10));
+    const y=parts[0], m=parts[1];
+    if(isNaN(y) || isNaN(m) || m<1 || m>12){ showToast("「年-月」の形式で入力してください(例: 2027-3)"); return; }
+    pushDutyUndo();
+    fiscalEndYear = y;
+    fiscalEndMonth = m;
+    await saveFiscalSettings();
+    scheduleDutyAutoBackup();
+    showToast("終了年月を変更しました");
     renderScorePanel(el);
   });
 }
