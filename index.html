@@ -2276,7 +2276,7 @@ async function renderScorePanel(el){
       <select id="periodSelect" style="border:1px solid var(--line); border-radius:8px; padding:5px 8px; font-size:12.5px;">
         ${fiscalPresets.map(p=>`<option value="${p.id}" ${p.id===currentPeriodId?"selected":""}>${periodLabelFor(p)}</option>`).join("") || `<option value="">未設定</option>`}
       </select>
-      <button id="editPeriodBtn" class="lock-btn">🔒 編集</button>
+      ${isAdmin ? `<button id="editPeriodBtn" class="lock-btn">🔒 編集</button>` : ``}
     </div>
     <table class="score-table">
       <thead><tr><th>名前</th><th>回数</th><th>スコア</th></tr></thead>
@@ -2306,10 +2306,13 @@ async function renderScorePanel(el){
     selectedPeriodId = e.target.value;
     renderScorePanel(el);
   });
-  document.getElementById("editPeriodBtn").addEventListener("click", ()=>{
-    if(!unlockAdmin()) return;
-    openPeriodModal();
-  });
+  const editPeriodBtnEl = document.getElementById("editPeriodBtn");
+  if(editPeriodBtnEl){
+    editPeriodBtnEl.addEventListener("click", ()=>{
+      if(!unlockAdmin()) return;
+      openPeriodModal();
+    });
+  }
 }
 /* ---- 特例日 管理モーダル ---- */
 function openSpecialDateModal(){
