@@ -454,7 +454,16 @@
     <button class="modal-close" id="closeRosterModal">閉じる</button>
   </div>
 </div>
-
+<div class="modal-overlay" id="periodModal">
+  <div class="modal-sheet">
+    <div class="modal-title">集計期間を編集</div>
+    <div class="modal-sub">期間の追加・削除ができます(管理者のみ)。削除するとその期間の希望表・当番カレンダーのデータも完全に削除されます</div>
+    <button id="periodAddBtn" style="width:100%; border:none; background:var(--leaf-600); color:#fff; border-radius:10px; padding:11px; font-weight:700; cursor:pointer; margin-bottom:12px;">＋ 新しい期間を追加</button>
+    <div id="periodList"></div>
+    <button class="modal-close" id="closePeriodModal">閉じる</button>
+  </div>
+</div>
+<div class="modal-overlay" id="calendarDayModal">
 <div class="modal-overlay" id="calendarDayModal">
   <div class="modal-sheet">
     <div class="modal-title" id="calDayTitle">日付</div>
@@ -1634,6 +1643,65 @@ document.getElementById("rosterAddBtn").addEventListener("click", async ()=>{
 document.getElementById("closeRosterModal").addEventListener("click", ()=>{
   document.getElementById("rosterModal").classList.remove("show");
 });
+  function openPeriodModal(){
+  renderPeriodList();
+  document.getElementById("periodModal").classList.add("show");
+}
+function renderPeriodList(){
+  const listEl = document.getElementById("periodList");
+  listEl.innerHTML = fiscalPresets.map(p=>`
+    <div class="backup-item">
+      <div class="info">${periodLabelFor(p)}<small>削除するとこの期間の希望表・当番カレンダーも消えます</small></div>
+      <button data-period-del="${p.id}">削除</button>
+    </div>`).join("") || `<div class="empty-note">まだ期間がありません</div>`;
+  listEl.querySelectorAll("[data-period-del]").forEach(btn=>{
+    btn.addEventListener("click", async ()=>{
+      const id = btn.getAttribute("data-period-del");
+      const p = fiscalPresets.find(x=>x.id===id);
+      if(!p) return;
+      if(!confirm(`「${periodLabelFor(p)}」を削除します。この期間の希望表・当番カレンダーのデータも完全に削除され、元に戻せません。よろしいですか？`)) return;
+      try{
+        await purgeDutyDataForPeriod(p);
+        fiscalPresets = fiscalPresets.filter(x=>x.id!==id);
+        if(selectedPeriodId===id) selectedPeriodId = fiscalPresets[0] ? fiscalPresets[0].id : null;
+        await saveFiscalPresets();
+        scheduleDutyAutoBackup();
+        showToast("期間を削除しました");
+        renderPeriodList();
+        renderDutyPanel();
+      }catch(e){
+        showToast("削除に失敗しました");
+      }
+    });
+  });
+}
+document.getElementById("periodAddBtn").addEventListener("click", async ()=>{
+  const startVal = prompt("開始の年月を「年-月」の形式で入力してください(例: 2026-4)");
+  if(startVal===null) return;
+  const startParts = startVal.split("-").map(s=>parseInt(String(s).trim(),10));
+  const sy=startParts[0], sm=startParts[1];
+  if(isNaN(sy) || isNaN(sm) || sm<1 || sm>12){ showToast("「年-月」の形式で入力してください(例: 2026-4)"); return; }
+  const endVal = prompt("終了の年月を「年-月」の形式で入力してください(例: 2027-3)");
+  if(endVal===null) return;
+  const endParts = endVal.split("-").map(s=>parseInt(String(s).trim(),10));
+  const ey=endParts[0], em=endParts[1];
+  if(isNaN(ey) || isNaN(em) || em<1 || em>12){ showToast("「年-月」の形式で入力してください(例: 2027-3)"); return; }
+  if(ey*12+(em-1) < sy*12+(sm-1)){ showToast("終了は開始より後の年月にしてください"); return; }
+  const newPeriod = { id: genId("fp"), startYear: sy, startMonth: sm, endYear: ey, endMonth: em };
+  if(!confirm(`「${periodLabelFor(newPeriod)}」として保存します。よろしいですか？`)) return;
+  fiscalPresets.push(newPeriod);
+  selectedPeriodId = newPeriod.id;
+  fiscalStartYear = sy; fiscalStartMonth = sm; fiscalEndYear = ey; fiscalEndMonth = em;
+  await saveFiscalPresets();
+  await saveFiscalSettings();
+  scheduleDutyAutoBackup();
+  showToast("期間を追加しました");
+  renderPeriodList();
+  renderDutyPanel();
+});
+document.getElementById("closePeriodModal").addEventListener("click", ()=>{
+  document.getElementById("periodModal").classList.remove("show");
+});
 
 /* ---- 年度設定(スコアの集計期間) ---- */
 let fiscalStartMonth = 4; // 1-12。既定は4月始まり
@@ -2004,13 +2072,13 @@ async function loadAllCalendarForScore(){
     return map;
   }catch(e){ return calendarAssign; }
 }
-async function purgeDutyDataForFiscalYear(fy){
+async function purgeDutyDataForPeriod(period){
   const collections = [preferencesCol(), calendarCol()];
   for(const col of collections){
     const snap = await col.get();
     const deletions = [];
     snap.forEach(doc=>{
-      if(fiscalYearForDate(doc.id) === fy){
+      if(dateInPeriod(doc.id, period)){
         deletions.push(col.doc(doc.id).delete());
       }
     });
@@ -2202,7 +2270,6 @@ async function renderScorePanel(el){
         <button class="lock-btn" id="adminLockBtn">${isAdmin?"🔓 管理者モード解除":"🔒 管理者パスワード入力"}</button>
         ${isAdmin ? `<button class="lock-btn" id="rosterBtn">🔒 名簿を管理</button>` : ``}
         ${isAdmin ? `<button class="lock-btn" id="specialDateBtn">🔒 特例日を管理</button>` : ``}
-        ${isAdmin ? `<button class="lock-btn" id="purgeOldDataBtn">🗑 過去データを削除</button>` : ``}
       </span>
     </div>
     <div class="me-bar">
@@ -2210,7 +2277,7 @@ async function renderScorePanel(el){
       <select id="periodSelect" style="border:1px solid var(--line); border-radius:8px; padding:5px 8px; font-size:12.5px;">
         ${fiscalPresets.map(p=>`<option value="${p.id}" ${p.id===currentPeriodId?"selected":""}>${periodLabelFor(p)}</option>`).join("") || `<option value="">未設定</option>`}
       </select>
-      ${isAdmin ? `<button id="addPeriodBtn" class="lock-btn">🔒 期間を追加</button>` : ``}
+      <button id="editPeriodBtn" class="lock-btn">🔒 編集</button>
     </div>
     <table class="score-table">
       <thead><tr><th>名前</th><th>回数</th><th>スコア</th></tr></thead>
@@ -2228,23 +2295,7 @@ async function renderScorePanel(el){
       openSpecialDateModal();
     });
   }
-  const purgeBtn = document.getElementById("purgeOldDataBtn");
-  if(purgeBtn){
-    purgeBtn.addEventListener("click", async ()=>{
-      const val = prompt("削除する年度を入力してください(例: 2024年度なら 2024)\n※その年度の希望表・当番カレンダーが完全に削除されます。元に戻せません。");
-      if(val===null) return;
-      const fy = parseInt(val,10);
-      if(isNaN(fy)){ showToast("数字で入力してください"); return; }
-      if(!confirm(`${fy}年度の希望表・当番カレンダーのデータを完全に削除します。この操作は元に戻せません。よろしいですか？`)) return;
-      try{
-        await purgeDutyDataForFiscalYear(fy);
-        showToast(`${fy}年度のデータを削除しました`);
-        renderScorePanel(el);
-      }catch(e){
-        showToast("削除に失敗しました");
-      }
-    });
-  }
+  
   const rosterBtnEl = document.getElementById("rosterBtn");
   if(rosterBtnEl){
     rosterBtnEl.addEventListener("click", ()=>{
@@ -2253,43 +2304,13 @@ async function renderScorePanel(el){
     });
   }
   document.getElementById("periodSelect").addEventListener("change", (e)=>{
-    const newId = e.target.value;
-    if(!unlockAdmin()){
-      e.target.value = currentPeriodId || "";
-      return;
-    }
-    selectedPeriodId = newId;
+    selectedPeriodId = e.target.value;
     renderScorePanel(el);
   });
-  const addPeriodBtnEl = document.getElementById("addPeriodBtn");
-  if(addPeriodBtnEl){
-    addPeriodBtnEl.addEventListener("click", async ()=>{
-      if(!unlockAdmin()) return;
-      const startVal = prompt("開始の年月を「年-月」の形式で入力してください(例: 2026-4)");
-      if(startVal===null) return;
-      const startParts = startVal.split("-").map(s=>parseInt(String(s).trim(),10));
-      const sy=startParts[0], sm=startParts[1];
-      if(isNaN(sy) || isNaN(sm) || sm<1 || sm>12){ showToast("「年-月」の形式で入力してください(例: 2026-4)"); return; }
-      const endVal = prompt("終了の年月を「年-月」の形式で入力してください(例: 2027-3)");
-      if(endVal===null) return;
-      const endParts = endVal.split("-").map(s=>parseInt(String(s).trim(),10));
-      const ey=endParts[0], em=endParts[1];
-      if(isNaN(ey) || isNaN(em) || em<1 || em>12){ showToast("「年-月」の形式で入力してください(例: 2027-3)"); return; }
-      if(ey*12+(em-1) < sy*12+(sm-1)){ showToast("終了は開始より後の年月にしてください"); return; }
-      const newPeriod = { id: genId("fp"), startYear: sy, startMonth: sm, endYear: ey, endMonth: em };
-      if(!confirm(`「${periodLabelFor(newPeriod)}」として保存します。よろしいですか？`)) return;
-      pushDutyUndo();
-      fiscalPresets.push(newPeriod);
-      selectedPeriodId = newPeriod.id;
-      fiscalStartYear = sy; fiscalStartMonth = sm; fiscalEndYear = ey; fiscalEndMonth = em;
-      await saveFiscalPresets();
-      await saveFiscalSettings();
-      scheduleDutyAutoBackup();
-      showToast("期間を保存しました");
-      renderScorePanel(el);
-    });
-  }
-}
+  document.getElementById("editPeriodBtn").addEventListener("click", ()=>{
+    if(!unlockAdmin()) return;
+    openPeriodModal();
+  });
 
 /* ---- 特例日 管理モーダル ---- */
 function openSpecialDateModal(){
