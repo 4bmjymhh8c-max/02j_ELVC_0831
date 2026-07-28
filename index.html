@@ -272,7 +272,8 @@
   }
   .mode-switch button.active{ background:#fff; color:var(--soil-800); }
 
-  .duty-section-title{ font-family:"Zen Maru Gothic",sans-serif; font-weight:700; color:var(--soil-800); font-size:15px; margin:2px 0 10px; display:flex; align-items:center; justify-content:space-between; gap:8px;}
+  .duty-section-title{ font-family:"Zen Maru Gothic",sans-serif; font-weight:700; color:var(--soil-800); font-size:15px; margin:2px 0 10px; display:flex; flex-direction:column; align-items:flex-start; gap:6px;}
+    .duty-section-title .duty-actions{ display:flex; flex-wrap:wrap; justify-content:flex-end; gap:6px; width:100%; }
   .duty-section-title .lock-btn{ font-size:11.5px; font-weight:600; color:var(--bark); background:var(--leaf-100); border:none; border-radius:999px; padding:5px 11px; cursor:pointer; white-space:nowrap; }
 
   .me-bar{ display:flex; align-items:center; gap:8px; background:var(--card); border:1px solid var(--line); border-radius:12px; padding:9px 12px; margin-bottom:12px; font-size:12.5px; color:var(--ink-soft); }
@@ -2295,7 +2296,7 @@ async function renderScorePanel(el){
   el.innerHTML = `
     <div class="duty-section-title">
       スコア
-      <span>
+      <span class="duty-actions">
         <button class="lock-btn" id="adminLockBtn">${isAdmin?"🔓 管理者モード解除":"🔒 管理者パスワード入力"}</button>
         ${isAdmin ? `<button class="lock-btn" id="rosterBtn">🔒 名簿を管理</button>` : ``}
         ${isAdmin ? `<button class="lock-btn" id="specialDateBtn">🔒 特例日を管理</button>` : ``}
@@ -2437,8 +2438,8 @@ async function renderCalendarPanel(el){
   months.forEach(m=>{ allDates = allDates.concat(monthDates(m.year, m.month).list); });
   await loadCalendarRange(allDates);
   await loadPreferencesRange(allDates.filter(isDutyDate));
-  let html = `<div class="duty-section-title">当番カレンダー
-    <span>
+    let html = `<div class="duty-section-title">当番カレンダー
+    <span class="duty-actions">
       <button class="lock-btn" id="editorLockBtn">${isAdmin?"🔓 管理者モード解除":"🔒 管理者パスワード入力"}</button>
       ${isAdmin ? `<button class="lock-btn" id="monthDataBtn">🔒 月を指定してデータ表示</button>` : ``}
     </span>
