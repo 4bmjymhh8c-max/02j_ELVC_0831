@@ -321,11 +321,12 @@
   }
   .cal-cell.empty{ background:transparent; border:none; cursor:default; }
   .cal-cell.duty{ background:#fdf3e6; border-color:#eccf9d; }
+  .cal-cell.past{ opacity:.55; }
   .cal-cell .cal-num{ font-family:"Zen Maru Gothic",sans-serif; font-weight:800; font-size:12.5px; color:var(--soil-800); }
   .cal-cell.duty .cal-num{ color:var(--alert); }
   .cal-cell .cal-label{ font-size:8px; color:var(--bark); line-height:1.1; margin-top:1px; text-align:center; }
   .cal-cell .cal-people{ font-size:8.5px; color:var(--leaf-600); font-weight:700; line-height:1.2; margin-top:2px; text-align:center; word-break:break-all; }
-
+  .cal-cell .cal-changed{ font-size:7.5px; color:var(--alert); font-weight:700; line-height:1.1; margin-top:1px; text-align:center; }
   .special-date-row{ display:flex; align-items:center; gap:8px; padding:9px 2px; border-bottom:1px solid var(--line); font-size:12.5px; }
   .special-date-row .sd-date{ font-weight:700; color:var(--soil-800); width:78px; flex:0 0 auto; }
   .special-date-row .sd-label{ flex:1; color:var(--ink-soft); min-width:0; }
@@ -2088,12 +2089,17 @@ async function togglePreference(dateStr){
 
 /* ---- カレンダー(実際の当番) ---- */
 let calendarAssign = {}; // { "YYYY-MM-DD": ["name1","name2"] }
+let calendarChanged = {};  // { "YYYY-MM-DD": true } 当番変更があった日のフラグ
+let calendarPrevious = {}; // { "YYYY-MM-DD": ["name1",...] } 変更前の担当者
 function calendarCol(){ return db.collection("calendar"); }
 async function loadCalendarRange(dateStrs){
   try{
     const results = await Promise.all(dateStrs.map(ds=>calendarCol().doc(ds).get()));
     results.forEach((snap,i)=>{
-      calendarAssign[dateStrs[i]] = (snap.exists && Array.isArray(snap.data().people)) ? snap.data().people : [];
+      const ds = dateStrs[i];
+      calendarAssign[ds] = (snap.exists && Array.isArray(snap.data().people)) ? snap.data().people : [];
+      calendarChanged[ds] = !!(snap.exists && snap.data().changed);
+      calendarPrevious[ds] = (snap.exists && Array.isArray(snap.data().previousPeople)) ? snap.data().previousPeople : [];
     });
   }catch(e){ /* オフライン時は既存キャッシュのまま */ }
 }
@@ -2119,10 +2125,20 @@ async function purgeDutyDataForPeriod(period){
   }
 }
 async function saveCalendarDay(dateStr, people){
+  const prevPeople = calendarAssign[dateStr] || [];
+  const isSwap = prevPeople.length>0 &&
+    JSON.stringify([...prevPeople].sort()) !== JSON.stringify([...people].sort());
   calendarAssign[dateStr]=people;
   try{
-    await calendarCol().doc(dateStr).set({ people, updatedAt: firebase.firestore.FieldValue.serverTimestamp() });
-    showToast("保存しました");
+    const payload = { people, updatedAt: firebase.firestore.FieldValue.serverTimestamp() };
+    if(isSwap){
+      payload.changed = true;
+      payload.previousPeople = prevPeople;
+    }
+    await calendarCol().doc(dateStr).set(payload);
+    calendarChanged[dateStr] = isSwap || !!calendarChanged[dateStr];
+    if(isSwap) calendarPrevious[dateStr] = prevPeople;
+    showToast(isSwap ? "当番を変更しました" : "保存しました");
   }catch(e){ showToast("保存に失敗しました"); }
 }
 
@@ -2456,10 +2472,11 @@ async function renderCalendarPanel(el){
       const d = new Date(ds+"T00:00:00");
       const duty = isDutyDate(ds);
       const people = calendarAssign[ds] || [];
-      html += `<div class="cal-cell ${duty?"duty":""}" data-cal-date="${ds}">
+              html += `<div class="cal-cell ${duty?"duty":""}${ds<todayStr?" past":""}" data-cal-date="${ds}">
         <div class="cal-num">${d.getDate()}</div>
         ${duty ? `<div class="cal-label">${escapeHtml(labelForDate(ds))}</div>` : ``}
         ${people.length ? `<div class="cal-people">${escapeHtml(people.join("・"))}</div>` : ``}
+        ${calendarChanged[ds] ? `<div class="cal-changed">🔁変更</div>` : ``}
       </div>`;
     });
     html += `</div></div>`;
@@ -2546,9 +2563,11 @@ async function openCalendarDayModal(ds){
   document.getElementById("calDayTitle").textContent = `${d.getFullYear()}/${d.getMonth()+1}/${d.getDate()}(${dow})`;
   const bodyEl = document.getElementById("calDayBody");
 
+    const prevAssigned = calendarPrevious[ds] || [];
   let infoHtml = `<div class="cal-day-info">
     ${duty ? `<b>${escapeHtml(label)}</b>・当番が必要な日(${pts}pt)<br>` : `通常日(当番は不要です)<br>`}
     希望している人: ${wanterNames.length ? escapeHtml(wanterNames.join("・")) : "なし"}
+    ${calendarChanged[ds] ? `<br>🔁 変更前の担当: ${prevAssigned.length ? escapeHtml(prevAssigned.join("・")) : "なし"}` : ``}
   </div>`;
 
   if(isAdmin){
