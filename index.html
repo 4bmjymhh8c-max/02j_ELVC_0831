@@ -102,7 +102,7 @@
   .sprout-svg{flex:0 0 auto; width:30px; height:34px;}
   .progress-text{flex:1; min-width:0;}
   .progress-text .big{font-family:"Zen Maru Gothic",sans-serif; font-weight:900; font-size:14px; color:#fff; white-space:nowrap;}
-  .progress-text .small{display:none;}
+  .progress-text .small{display:block; font-size:11px; color:#dfe9de; margin-top:4px; font-weight:600; min-height:14px; line-height:1.4;}
   .bar-track{height:6px; border-radius:99px; background:rgba(255,255,255,.15); margin-top:4px; overflow:hidden;}
   .bar-fill{height:100%; background:linear-gradient(90deg,#8fc79a,#c9e7a8); border-radius:99px; transition:width .3s ease;}
 
@@ -470,7 +470,14 @@
     <button class="modal-close" id="closeCalDayModal">閉じる</button>
   </div>
 </div>
-
+<div class="modal-overlay" id="monthDataModal">
+  <div class="modal-sheet">
+    <div class="modal-title">月別データを表示</div>
+    <div class="modal-sub" id="monthDataSub">条件を選んで表示します</div>
+    <div id="monthDataBody"></div>
+    <button class="modal-close" id="closeMonthDataModal">閉じる</button>
+  </div>
+</div>
 <div class="toast" id="toast"></div>
 
 <!-- Firebase SDK (compat版。設定は下部スクリプト内 firebaseConfig を参照) -->
@@ -1383,7 +1390,7 @@ function updateProgress(total,done){
   document.getElementById("barFill").style.width=pct+"%";
   document.getElementById("progressSmall").textContent =
     isHistoryMode() ? "その日の完了タスク" :
-    (pct===100 && total>0 ? "管理完了しました。おつかれさまでした🍵" : "完了したタスク");
+    (pct===100 && total>0 ? `${INITIAL_DATA[currentTab].label}を完了しました。おつかれさまでした🍵` : "完了したタスク");
   drawSprout(pct);
 }
 function drawSprout(pct){
@@ -1563,16 +1570,42 @@ document.getElementById("closeModal").addEventListener("click", ()=>{
    ========================================================================= */
 
 /* ---- 権限まわり(簡易パスワード。必要に応じて下の値を書き換えてください) ---- */
-const ADMIN_PASSWORD  = "obungu_no_831";   // スコアのポイント設定・特例日の追加・カレンダーへの当番入力に共通で使用
-
+const ADMIN_PASSWORD  = "obungu_no_831";   // 初期パスワード（変更後はFirestore上の値が優先されます）
+let adminPasswordCurrent = ADMIN_PASSWORD;
+function adminAuthRef(){ return db.collection("duty_settings").doc("adminAuth"); }
+async function loadAdminPassword(){
+  try{
+    const snap = await adminAuthRef().get();
+    if(snap.exists && typeof snap.data().password==="string" && snap.data().password){
+      adminPasswordCurrent = snap.data().password;
+    }
+  }catch(e){ /* オフライン時などは既定値のまま */ }
+}
+async function changeAdminPassword(){
+  const cur = prompt("現在の管理者パスワードを入力してください");
+  if(cur===null) return;
+  if(cur!==adminPasswordCurrent){ showToast("現在のパスワードが違います"); return; }
+  const next1 = prompt("新しいパスワードを入力してください");
+  if(next1===null) return;
+  if(!next1.trim()){ showToast("新しいパスワードを入力してください"); return; }
+  const next2 = prompt("確認のため、新しいパスワードをもう一度入力してください");
+  if(next2===null) return;
+  if(next1!==next2){ showToast("新しいパスワードが一致しません"); return; }
+  try{
+    await adminAuthRef().set({ password: next1 });
+    adminPasswordCurrent = next1;
+    showToast("パスワードを変更しました");
+  }catch(e){
+    showToast("パスワードの変更に失敗しました。通信を確認してください");
+  }
+}
 let isAdmin  = localStorage.getItem("dutyIsAdmin")==="true";
 let myName   = localStorage.getItem("dutyMyName") || "";
-
 function unlockAdmin(){
   if(isAdmin) return true;
   const pw = prompt("管理者パスワードを入力してください");
   if(pw===null) return false;
-  if(pw===ADMIN_PASSWORD){
+  if(pw===adminPasswordCurrent){
     isAdmin=true; localStorage.setItem("dutyIsAdmin","true");
     showToast("管理者モードを解除しました");
     renderDutyPanel();
@@ -2235,12 +2268,10 @@ let selectedPeriodId = null; // 表示中の期間(未選択なら保存済み�
 async function renderScorePanel(el){
   el.innerHTML = `<div class="empty-note">読み込み中…</div>`;
   const allCal = await loadAllCalendarForScore();
-
   const currentPeriodId = (selectedPeriodId && fiscalPresets.some(p=>p.id===selectedPeriodId))
     ? selectedPeriodId
     : (fiscalPresets[0] ? fiscalPresets[0].id : null);
   const currentPeriod = fiscalPresets.find(p=>p.id===currentPeriodId) || null;
-
   const scores = {}, counts = {};
   roster.forEach(n=>{ scores[n]=0; counts[n]=0; });
   if(currentPeriod){
@@ -2261,7 +2292,6 @@ async function renderScorePanel(el){
       <td>${counts[name]}回</td>
       <td><b>${scores[name]}</b>pt</td>
     </tr>`).join("");
-
   el.innerHTML = `
     <div class="duty-section-title">
       スコア
@@ -2269,6 +2299,7 @@ async function renderScorePanel(el){
         <button class="lock-btn" id="adminLockBtn">${isAdmin?"🔓 管理者モード解除":"🔒 管理者パスワード入力"}</button>
         ${isAdmin ? `<button class="lock-btn" id="rosterBtn">🔒 名簿を管理</button>` : ``}
         ${isAdmin ? `<button class="lock-btn" id="specialDateBtn">🔒 特例日を管理</button>` : ``}
+        ${isAdmin ? `<button class="lock-btn" id="pwChangeBtn">🔒 パスワード変更</button>` : ``}
       </span>
     </div>
     <div class="me-bar">
@@ -2294,12 +2325,18 @@ async function renderScorePanel(el){
       openSpecialDateModal();
     });
   }
-  
   const rosterBtnEl = document.getElementById("rosterBtn");
   if(rosterBtnEl){
     rosterBtnEl.addEventListener("click", ()=>{
       if(!unlockAdmin()) return;
       openRosterModal();
+    });
+  }
+  const pwChangeBtnEl = document.getElementById("pwChangeBtn");
+  if(pwChangeBtnEl){
+    pwChangeBtnEl.addEventListener("click", ()=>{
+      if(!unlockAdmin()) return;
+      changeAdminPassword();
     });
   }
   document.getElementById("periodSelect").addEventListener("change", (e)=>{
@@ -2400,11 +2437,12 @@ async function renderCalendarPanel(el){
   months.forEach(m=>{ allDates = allDates.concat(monthDates(m.year, m.month).list); });
   await loadCalendarRange(allDates);
   await loadPreferencesRange(allDates.filter(isDutyDate));
-
   let html = `<div class="duty-section-title">当番カレンダー
-    <button class="lock-btn" id="editorLockBtn">${isAdmin?"🔓 管理者モード解除":"🔒 管理者パスワード入力"}</button>
+    <span>
+      <button class="lock-btn" id="editorLockBtn">${isAdmin?"🔓 管理者モード解除":"🔒 管理者パスワード入力"}</button>
+      ${isAdmin ? `<button class="lock-btn" id="monthDataBtn">🔒 月を指定してデータ表示</button>` : ``}
+    </span>
   </div>`;
-
     months.forEach((m, mIdx)=>{
     const { list } = monthDates(m.year, m.month);
     html += `<div class="cal-month-block" id="calMonthBlock${mIdx}" data-year="${m.year}" data-month="${m.month+1}">`;
@@ -2425,21 +2463,74 @@ async function renderCalendarPanel(el){
     });
     html += `</div></div>`;
   });
-
   el.innerHTML = html;
   document.getElementById("editorLockBtn").addEventListener("click", ()=>{
     if(isAdmin) lockAdmin(); else unlockAdmin();
   });
+  const monthDataBtnEl = document.getElementById("monthDataBtn");
+  if(monthDataBtnEl){
+    monthDataBtnEl.addEventListener("click", ()=>{
+      if(!unlockAdmin()) return;
+      openMonthDataModal();
+    });
+  }
   el.querySelectorAll("[data-print-month]").forEach(btn=>{
   btn.addEventListener("click", (e)=>{
     e.stopPropagation();
     downloadCalendarMonthPdf(btn.getAttribute("data-print-month"));
   });
 });
-
   el.querySelectorAll("[data-cal-date]").forEach(cell=>{
     cell.addEventListener("click", ()=>openCalendarDayModal(cell.getAttribute("data-cal-date")));
   });
+}
+  async function openMonthDataModal(){
+  const typeVal = prompt(
+    "表示するデータを選んでください\n1: 希望表(誰が希望しているか)\n2: 当番カレンダー(実際の割り当て)\n\n半角数字の 1 か 2 を入力してください",
+    "2"
+  );
+  if(typeVal===null) return;
+  const type = typeVal.trim();
+  if(type!=="1" && type!=="2"){ showToast("1か2を入力してください"); return; }
+  const ymVal = prompt("表示したい年月を「年-月」の形式で入力してください(例: 2026-4)");
+  if(ymVal===null) return;
+  const parts = ymVal.split("-").map(s=>parseInt(String(s).trim(),10));
+  const y=parts[0], m=parts[1];
+  if(isNaN(y) || isNaN(m) || m<1 || m>12){ showToast("「年-月」の形式で入力してください(例: 2026-4)"); return; }
+  const dates = monthDates(y, m-1).list.filter(isDutyDate);
+  const subEl = document.getElementById("monthDataSub");
+  const bodyEl = document.getElementById("monthDataBody");
+  subEl.textContent = `${y}年${m}月 ・ ${type==="1"?"希望表":"当番カレンダー"}`;
+  bodyEl.innerHTML = `<div class="empty-note">読み込み中…</div>`;
+  document.getElementById("monthDataModal").classList.add("show");
+  if(dates.length===0){
+    bodyEl.innerHTML = `<div class="empty-note">この月には当番が必要な日がありません</div>`;
+    return;
+  }
+  if(type==="1"){
+    await loadPreferencesRange(dates);
+    bodyEl.innerHTML = dates.map(ds=>{
+      const d=new Date(ds+"T00:00:00");
+      const dow=["日","月","火","水","木","金","土"][d.getDay()];
+      const wants = preferences[ds]||{};
+      const names = Object.keys(wants).filter(n=>wants[n]);
+      return `<div class="special-date-row">
+        <div class="sd-date">${d.getMonth()+1}/${d.getDate()}(${dow})</div>
+        <div class="sd-label">${escapeHtml(labelForDate(ds))}: ${names.length?escapeHtml(names.join("・")):"希望なし"}</div>
+      </div>`;
+    }).join("");
+  }else{
+    await loadCalendarRange(dates);
+    bodyEl.innerHTML = dates.map(ds=>{
+      const d=new Date(ds+"T00:00:00");
+      const dow=["日","月","火","水","木","金","土"][d.getDay()];
+      const people = calendarAssign[ds]||[];
+      return `<div class="special-date-row">
+        <div class="sd-date">${d.getMonth()+1}/${d.getDate()}(${dow})</div>
+        <div class="sd-label">${escapeHtml(labelForDate(ds))}: ${people.length?escapeHtml(people.join("・")):"未割当"}</div>
+      </div>`;
+    }).join("");
+  }
 }
 async function openCalendarDayModal(ds){
   const d = new Date(ds+"T00:00:00");
@@ -2499,7 +2590,9 @@ async function openCalendarDayModal(ds){
 document.getElementById("closeCalDayModal").addEventListener("click", ()=>{
   document.getElementById("calendarDayModal").classList.remove("show");
 });
-
+document.getElementById("closeMonthDataModal").addEventListener("click", ()=>{
+  document.getElementById("monthDataModal").classList.remove("show");
+});
 /* ---- モード / サブタブ切り替え ---- */
 document.getElementById("modeSwitch").addEventListener("click", async (e)=>{
   const btn = e.target.closest("button[data-mode]");
@@ -2527,7 +2620,7 @@ document.getElementById("dutySubNav").addEventListener("click", async (e)=>{
 (async function init(){
   await initFirebase();
   setupConnectionBanner();
-  await Promise.all([loadRoster(), loadSpecialDates()]);
+  await Promise.all([loadRoster(), loadSpecialDates(), loadAdminPassword()]);
   await loadFiscalSettings();
   await loadFiscalPresets();
   await loadTab(currentTab);
