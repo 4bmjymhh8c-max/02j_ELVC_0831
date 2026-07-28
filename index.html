@@ -2200,7 +2200,7 @@ function prefRowHtml(ds, editable){
         <div class="pref-label">${escapeHtml(label)}</div>
         ${ds===todayStr ? `<div class="pref-today-dot">今日</div>` : ``}
       </div>
-      <div class="pref-wanters">${names.length? escapeHtml(names.join("・")) : "まだ希望なし"}</div>
+      <div class="pref-wanters">${names.length? escapeHtml(names.join("・")) : "希望者なし"}</div>
       ${rightHtml}
     </div>`;
 }
