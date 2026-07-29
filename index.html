@@ -1190,9 +1190,9 @@ function render(){
         <div class="check ${isChecked?"checked":""}${readOnly?" readonly":""}" data-id="${task.id}">${checkSvg()}</div>
         <div class="task-main">
           <div class="task-text ${isChecked?"checked":""}">${linkify(task.text)}</div>
-          ${task.assignee ? `<div class="task-assignee">👤 ${escapeHtml(task.assignee)}</div>` : ``}
+                    ${task.assignee ? `<div class="task-assignee">${escapeHtml(task.assignee)}</div>` : ``}
         </div>
-        ${(readOnly || !editMode) ? `` : `<button class="icon-btn" data-edit-task-assignee="${section.id}|${task.id}" title="担当を編集">${pencilSvg()}</button>`}
+        ${(readOnly || !editMode) ? `` : `<button class="icon-btn" data-edit-task="${section.id}|${task.id}" title="タスクを編集">${pencilSvg()}</button>`}
         ${(readOnly || !editMode) ? `` : `<button class="task-remove" data-remove-task="${section.id}|${task.id}" title="削除">×</button>`}
       `;
       list.appendChild(row);
@@ -1294,26 +1294,32 @@ function render(){
     render();
   });
 });
-  main.querySelectorAll("[data-edit-task-assignee]").forEach(el=>{
+    main.querySelectorAll("[data-edit-task]").forEach(el=>{
   el.addEventListener("click", async (e)=>{
     e.stopPropagation();
     if(isHistoryMode()) return;
-    const [sId,tId]=el.getAttribute("data-edit-task-assignee").split("|");
+    const [sId,tId]=el.getAttribute("data-edit-task").split("|");
     const sec=structures[currentTab].find(s=>s.id===sId);
     const task=sec.tasks.find(t=>t.id===tId);
-    const val = prompt("この項目の担当者名を入力してください(空にすると無記名になります)", task.assignee||"");
-    if(val===null) return;
+    const newText = prompt("タスクの内容を編集してください", task.text||"");
+    if(newText===null) return;
+    if(!newText.trim()){ showToast("タスクの内容を入力してください"); return; }
+    const newAssigneeVal = prompt("担当者名を編集してください(空にすると無記名になります)", task.assignee||"");
+    if(newAssigneeVal===null) return;
     pushUndo(currentTab);
-    const newAssignee = val.trim();
+    const finalText = newText.trim();
+    const finalAssignee = newAssigneeVal.trim();
     await transactStructure(currentTab, (sections)=>{
       const s = sections.find(s=>s.id===sId);
       const t = s ? s.tasks.find(t=>t.id===tId) : null;
-      if(t) t.assignee = newAssignee;
+      if(t){ t.text = finalText; t.assignee = finalAssignee; }
       return sections;
     });
     render();
+    showToast("タスクを更新しました");
   });
 });
+
   main.querySelectorAll("[data-move-section]").forEach(el=>{
   el.addEventListener("click", async (e)=>{
     e.stopPropagation();
