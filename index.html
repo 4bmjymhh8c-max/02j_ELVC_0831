@@ -1047,10 +1047,8 @@ async function loadTab(tab){
   await ensureStructureLoaded(tab);
   await pruneOldChecks(tab);
   await loadTodayChecks(tab);
-  checkedMap = todayChecked;
     checkedMap = todayChecked;
   await loadViewDateAssignees(viewDate);
-  await loadDateStats(tab);
   await loadDateStats(tab);
   subscribeStructure(tab);
   subscribeChecks(tab);
@@ -1120,9 +1118,7 @@ function render(){
     banner.className = "history-banner";
     banner.innerHTML = `<span>📖 ${md}(${dow}) の記録を表示中（編集はできません）</span><button id="backToTodayBtn">今日に戻る</button>`;
     main.appendChild(banner);
-    banner.querySelector("#backToTodayBtn").addEventListener("click", ()=>selectDate(todayStr));
-  }
-    banner.querySelector("#backToTodayBtn").addEventListener("click", ()=>selectDate(todayStr));
+        banner.querySelector("#backToTodayBtn").addEventListener("click", ()=>selectDate(todayStr));
   }
 
   if(isDutyDate(viewDate)){
