@@ -143,6 +143,12 @@
     border:none; background:var(--leaf-600); color:#fff; border-radius:999px;
     padding:8px 13px; font-size:12px; cursor:pointer; flex:0 0 auto; font-weight:600;
   }
+    .duty-of-day-banner{
+    background:var(--leaf-100); color:var(--soil-800);
+    border-radius:12px; padding:10px 13px; margin-bottom:12px;
+    font-size:12.5px; font-weight:600;
+  }
+  .duty-of-day-banner b{ font-family:"Zen Maru Gothic",sans-serif; }
 
   .section-card{
     background:var(--card);
@@ -745,6 +751,7 @@ let openSections = {};
 let editMode = false;
 let todayStr = "";
 let viewDate = "";         // 現在表示中の日付(YYYY-MM-DD)
+let viewDateAssignees = []; // 現在表示中の日の当番(名前の配列)
 let dateStats = {};        // 日付ごとの{done,total}(直近7日分)
 let undoStacks = { asa:[], hiru:[], yugata:[] };
 const UNDO_LIMIT = 20;
@@ -1041,6 +1048,9 @@ async function loadTab(tab){
   await pruneOldChecks(tab);
   await loadTodayChecks(tab);
   checkedMap = todayChecked;
+    checkedMap = todayChecked;
+  await loadViewDateAssignees(viewDate);
+  await loadDateStats(tab);
   await loadDateStats(tab);
   subscribeStructure(tab);
   subscribeChecks(tab);
@@ -1048,6 +1058,14 @@ async function loadTab(tab){
 }
 
 /* 日付チップを選択して表示日を切り替える */
+async function loadViewDateAssignees(day){
+  if(!firebaseReady){ viewDateAssignees = []; return; }
+  try{
+    const snap = await calendarCol().doc(day).get();
+    viewDateAssignees = (snap.exists && Array.isArray(snap.data().people)) ? snap.data().people : [];
+  }catch(e){ viewDateAssignees = []; }
+}
+
 async function selectDate(day){
   if(day===viewDate) return;
   viewDate = day;
@@ -1056,6 +1074,7 @@ async function selectDate(day){
   }else{
     checkedMap = await loadHistoryChecks(currentTab, day);
   }
+  await loadViewDateAssignees(day);
   updateUndoBtn();
   render();
 }
@@ -1103,7 +1122,18 @@ function render(){
     main.appendChild(banner);
     banner.querySelector("#backToTodayBtn").addEventListener("click", ()=>selectDate(todayStr));
   }
+    banner.querySelector("#backToTodayBtn").addEventListener("click", ()=>selectDate(todayStr));
+  }
 
+  if(isDutyDate(viewDate)){
+    const dutyBanner = document.createElement("div");
+    dutyBanner.className = "duty-of-day-banner";
+    const dLabel = readOnly ? `${shortDowLabel(viewDate).md}(${shortDowLabel(viewDate).dow})の当番` : "今日の当番";
+    dutyBanner.innerHTML = `🧑‍🌾 <b>${dLabel}:</b> ${viewDateAssignees.length ? escapeHtml(viewDateAssignees.join("・")) : "未定"}`;
+    main.appendChild(dutyBanner);
+  }
+
+  document.getElementById("undoBtn").style.display = readOnly ? "none" : "";
   document.getElementById("undoBtn").style.display = readOnly ? "none" : "";
   document.getElementById("backupBtn").style.display = readOnly ? "none" : "";
   document.getElementById("backupBtn").style.display = readOnly ? "none" : "";
