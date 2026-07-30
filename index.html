@@ -1186,7 +1186,7 @@ function render(){
         <div class="check ${isChecked?"checked":""}${readOnly?" readonly":""}" data-id="${task.id}">${checkSvg()}</div>
         <div class="task-main">
           <div class="task-text ${isChecked?"checked":""}">${linkify(task.text)}</div>
-                    ${task.assignee ? `<div class="task-assignee">${escapeHtml(task.assignee)}</div>` : ``}
+                                        ${task.assignee ? `<div class="task-assignee">担当: ${escapeHtml(task.assignee)}</div>` : ``}
         </div>
         ${(readOnly || !editMode) ? `` : `<button class="icon-btn" data-edit-task="${section.id}|${task.id}" title="タスクを編集">${pencilSvg()}</button>`}
         ${(readOnly || !editMode) ? `` : `<button class="task-remove" data-remove-task="${section.id}|${task.id}" title="削除">×</button>`}
