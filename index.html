@@ -1635,18 +1635,33 @@ async function changeAdminPassword(){
 }
 let isAdmin  = localStorage.getItem("dutyIsAdmin")==="true";
 let myName   = localStorage.getItem("dutyMyName") || "";
+if(isAdmin){
+  // ページを開き直した時、以前ロック解除済みならFirestore側の印も再度つけ直す
+  firebase.auth().onAuthStateChanged(user=>{ if(user) markAdminInFirestore(); });
+}
 function unlockAdmin(){
   if(isAdmin) return true;
   const pw = prompt("管理者パスワードを入力してください");
   if(pw===null) return false;
   if(pw===adminPasswordCurrent){
     isAdmin=true; localStorage.setItem("dutyIsAdmin","true");
+    markAdminInFirestore();
     showToast("管理者モードを解除しました");
     renderDutyPanel();
     return true;
   }
   showToast("パスワードが違います");
   return false;
+}
+async function markAdminInFirestore(){
+  if(!firebaseReady) return;
+  try{
+    const uid = firebase.auth().currentUser && firebase.auth().currentUser.uid;
+    if(!uid) return;
+    await db.collection("admin_sessions").doc(uid).set({
+      grantedAt: firebase.firestore.FieldValue.serverTimestamp()
+    });
+  }catch(e){ /* 失敗してもUI上のロックはそのまま機能するので致命的ではない */ }
 }
 function lockAdmin(){ isAdmin=false; localStorage.removeItem("dutyIsAdmin"); showToast("管理者モードをロックしました"); renderDutyPanel(); }
 
