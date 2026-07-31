@@ -357,7 +357,16 @@
 </head>
 <body>
 
+<div id="fatalErrorBanner" style="display:none; position:fixed; inset:0; z-index:9999; background:#26402f; color:#fff; align-items:center; justify-content:center; padding:24px; text-align:center; font-family:'Noto Sans JP',sans-serif;">
+  <div style="max-width:340px;">
+    <div style="font-size:15px; font-weight:700; margin-bottom:10px;">読み込みに失敗しました</div>
+    <div style="font-size:13px; line-height:1.7; color:#dfe9de; margin-bottom:18px;">通信状況が不安定な可能性があります。もう一度読み込み直してください。</div>
+    <button id="fatalErrorReloadBtn" style="border:none; background:#fff; color:#26402f; border-radius:999px; padding:12px 26px; font-size:14px; font-weight:700; cursor:pointer;">🔄 再読み込み</button>
+  </div>
+</div>
+
 <header class="top">
+
   <div class="brand-row">
     <div class="brand">圃場管理</div>
     <div class="date-pill" id="datePill">–</div>
@@ -403,7 +412,7 @@
       <button class="foot-btn" id="dutyUndoBtn" disabled>↩ 取消</button>
       <button class="foot-btn" id="dutyBackupBtn">💾 保存</button>
       <button class="foot-btn" id="dutyRestoreBtn">📂 復元</button>
-      <button class="foot-btn" id="editModeBtn">✏️ 編集</button>
+      <button class="foot-btn" id="editModeBtnDuty">✏️ 編集</button>
     </div>
   </div>
 
@@ -489,11 +498,26 @@
 <div class="toast" id="toast"></div>
 
 <!-- Firebase SDK (compat版。設定は下部スクリプト内 firebaseConfig を参照) -->
-<script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-firestore-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-auth-compat.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script>
+  window.__criticalScriptFailed = false;
+  function __onCriticalScriptError(){
+    window.__criticalScriptFailed = true;
+    if(document.readyState === "loading"){
+      document.addEventListener("DOMContentLoaded", showFatalErrorBanner);
+    }else{
+      showFatalErrorBanner();
+    }
+  }
+  function showFatalErrorBanner(){
+    const el = document.getElementById("fatalErrorBanner");
+    if(el) el.style.display = "flex";
+  }
+</script>
+<script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-app-compat.js" onerror="__onCriticalScriptError()"></script>
+<script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-firestore-compat.js" onerror="__onCriticalScriptError()"></script>
+<script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-auth-compat.js" onerror="__onCriticalScriptError()"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js" onerror="__onCriticalScriptError()"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js" onerror="__onCriticalScriptError()"></script>
 <script>
 /* =========================================================================
    Firebase 設定
@@ -1133,8 +1157,10 @@ function render(){
   document.getElementById("undoBtn").style.display = readOnly ? "none" : "";
   document.getElementById("backupBtn").style.display = readOnly ? "none" : "";
   document.getElementById("backupBtn").style.display = readOnly ? "none" : "";
-  document.getElementById("editModeBtn").classList.toggle("danger", editMode);
-  document.getElementById("editModeBtn").textContent = editMode ? "✅ 編集を終了" : "✏️ 編集";
+    document.querySelectorAll("#editModeBtn, #editModeBtnDuty").forEach(btn=>{
+    btn.classList.toggle("danger", editMode);
+    btn.textContent = editMode ? "✅ 編集を終了" : "✏️ 編集";
+  });
 
   const sections = structures[currentTab] || [];
   let totalTasks=0, doneTasks=0;
@@ -1590,9 +1616,11 @@ document.getElementById("restoreBtn").addEventListener("click", ()=>{
   if(!unlockAdmin()) return;
   openRestoreModal();
 });
-document.getElementById("editModeBtn").addEventListener("click", ()=>{
-  editMode = !editMode;
-  render();
+document.querySelectorAll("#editModeBtn, #editModeBtnDuty").forEach(btn=>{
+  btn.addEventListener("click", ()=>{
+    editMode = !editMode;
+    render();
+  });
 });
 
 document.getElementById("closeModal").addEventListener("click", ()=>{
@@ -1637,7 +1665,9 @@ let isAdmin  = localStorage.getItem("dutyIsAdmin")==="true";
 let myName   = localStorage.getItem("dutyMyName") || "";
 if(isAdmin){
   // ページを開き直した時、以前ロック解除済みならFirestore側の印も再度つけ直す
-  firebase.auth().onAuthStateChanged(user=>{ if(user) markAdminInFirestore(); });
+    if(typeof firebase !== "undefined" && firebase.auth){
+    firebase.auth().onAuthStateChanged(user=>{ if(user) markAdminInFirestore(); });
+  }
 }
 function unlockAdmin(){
   if(isAdmin) return true;
@@ -2683,15 +2713,26 @@ document.getElementById("dutySubNav").addEventListener("click", async (e)=>{
   await renderDutyPanel();
 });
 
+document.getElementById("fatalErrorReloadBtn").addEventListener("click", ()=>{
+  location.reload();
+});
+window.addEventListener("error", ()=>{ showFatalErrorBanner(); });
+window.addEventListener("unhandledrejection", ()=>{ showFatalErrorBanner(); });
+
 /* ---------- init ---------- */
 (async function init(){
-  await initFirebase();
-  setupConnectionBanner();
-  await Promise.all([loadRoster(), loadSpecialDates(), loadAdminPassword()]);
-  await loadFiscalSettings();
-  await loadFiscalPresets();
-  await loadTab(currentTab);
-  render();
+  if(window.__criticalScriptFailed){ showFatalErrorBanner(); return; }
+  try{
+    await initFirebase();
+    setupConnectionBanner();
+    await Promise.all([loadRoster(), loadSpecialDates(), loadAdminPassword()]);
+    await loadFiscalSettings();
+    await loadFiscalPresets();
+    await loadTab(currentTab);
+    render();
+  }catch(e){
+    showFatalErrorBanner();
+  }
 })();
 </script>
 </html>
