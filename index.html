@@ -357,17 +357,7 @@
 </head>
 <body>
 
-<div id="fatalErrorBanner" style="display:none; position:fixed; inset:0; z-index:9999; background:#26402f; color:#fff; align-items:center; justify-content:center; padding:24px; text-align:center; font-family:'Noto Sans JP',sans-serif;">
-  <div style="max-width:340px;">
-    <div style="font-size:15px; font-weight:700; margin-bottom:10px;">読み込みに失敗しました</div>
-        <div style="font-size:13px; line-height:1.7; color:#dfe9de; margin-bottom:18px;">通信状況が不安定な可能性があります。もう一度読み込み直してください。</div>
-    <button id="fatalErrorReloadBtn" style="border:none; background:#fff; color:#26402f; border-radius:999px; padding:12px 26px; font-size:14px; font-weight:700; cursor:pointer;">🔄 再読み込み</button>
-    <div id="fatalErrorDetail" style="font-size:10.5px; color:#9fb3a2; margin-top:14px; word-break:break-all;"></div>
-  </div>
-</div>
-
 <header class="top">
-
   <div class="brand-row">
     <div class="brand">圃場管理</div>
     <div class="date-pill" id="datePill">–</div>
@@ -413,7 +403,7 @@
       <button class="foot-btn" id="dutyUndoBtn" disabled>↩ 取消</button>
       <button class="foot-btn" id="dutyBackupBtn">💾 保存</button>
       <button class="foot-btn" id="dutyRestoreBtn">📂 復元</button>
-      <button class="foot-btn" id="editModeBtnDuty">✏️ 編集</button>
+      <button class="foot-btn" id="editModeBtn">✏️ 編集</button>
     </div>
   </div>
 
@@ -499,39 +489,11 @@
 <div class="toast" id="toast"></div>
 
 <!-- Firebase SDK (compat版。設定は下部スクリプト内 firebaseConfig を参照) -->
-<script>
-  window.__criticalScriptFailed = false;
-  function __onCriticalScriptError(){
-    window.__criticalScriptFailed = true;
-    if(document.readyState === "loading"){
-      document.addEventListener("DOMContentLoaded", showFatalErrorBanner);
-    }else{
-      showFatalErrorBanner();
-    }
-  }
-  function showFatalErrorBanner(detail){
-    const el = document.getElementById("fatalErrorBanner");
-    if(el) el.style.display = "flex";
-    if(detail){
-      const d = document.getElementById("fatalErrorDetail");
-      if(d) d.textContent = String(detail).slice(0, 300);
-    }
-  }
-  // ここで最初から仕込んでおくことで、後ろのどこでエラーが起きても必ず拾える
-  window.addEventListener("error", (e)=>{
-    showFatalErrorBanner((e && e.message) ? e.message : String(e));
-  });
-  window.addEventListener("unhandledrejection", (e)=>{
-    const r = e && e.reason;
-    showFatalErrorBanner(r && r.message ? r.message : String(r));
-  });
-</script>
-
-<script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-app-compat.js" onerror="__onCriticalScriptError()" crossorigin="anonymous"></script>
-<script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-firestore-compat.js" onerror="__onCriticalScriptError()" crossorigin="anonymous"></script>
-<script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-auth-compat.js" onerror="__onCriticalScriptError()" crossorigin="anonymous"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js" onerror="__onCriticalScriptError()" crossorigin="anonymous"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js" onerror="__onCriticalScriptError()" crossorigin="anonymous"></script>
+<script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-auth-compat.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script>
 /* =========================================================================
    Firebase 設定
@@ -584,7 +546,7 @@ async function initFirebase(){
   try{
     firebase.initializeApp(firebaseConfig);
     db = firebase.firestore();
-    db.enablePersistence({ synchronizeTabs:true }).catch(e=>{ /* 複数タブ or 非対応ブラウザ(iPad Safari等)は無視 */ });
+    try{ db.enablePersistence({ synchronizeTabs:true }); }catch(e){ /* 複数タブ or 非対応ブラウザは無視 */ }
     await new Promise((resolve, reject)=>{
       firebase.auth().onAuthStateChanged(user=>{
         if(user){ resolve(); }
@@ -1171,10 +1133,8 @@ function render(){
   document.getElementById("undoBtn").style.display = readOnly ? "none" : "";
   document.getElementById("backupBtn").style.display = readOnly ? "none" : "";
   document.getElementById("backupBtn").style.display = readOnly ? "none" : "";
-    document.querySelectorAll("#editModeBtn, #editModeBtnDuty").forEach(btn=>{
-    btn.classList.toggle("danger", editMode);
-    btn.textContent = editMode ? "✅ 編集を終了" : "✏️ 編集";
-  });
+  document.getElementById("editModeBtn").classList.toggle("danger", editMode);
+  document.getElementById("editModeBtn").textContent = editMode ? "✅ 編集を終了" : "✏️ 編集";
 
   const sections = structures[currentTab] || [];
   let totalTasks=0, doneTasks=0;
@@ -1630,11 +1590,9 @@ document.getElementById("restoreBtn").addEventListener("click", ()=>{
   if(!unlockAdmin()) return;
   openRestoreModal();
 });
-document.querySelectorAll("#editModeBtn, #editModeBtnDuty").forEach(btn=>{
-  btn.addEventListener("click", ()=>{
-    editMode = !editMode;
-    render();
-  });
+document.getElementById("editModeBtn").addEventListener("click", ()=>{
+  editMode = !editMode;
+  render();
 });
 
 document.getElementById("closeModal").addEventListener("click", ()=>{
@@ -1677,35 +1635,18 @@ async function changeAdminPassword(){
 }
 let isAdmin  = localStorage.getItem("dutyIsAdmin")==="true";
 let myName   = localStorage.getItem("dutyMyName") || "";
-if(isAdmin){
-  // ページを開き直した時、以前ロック解除済みならFirestore側の印も再度つけ直す
-    if(typeof firebase !== "undefined" && firebase.auth){
-    firebase.auth().onAuthStateChanged(user=>{ if(user) markAdminInFirestore(); });
-  }
-}
 function unlockAdmin(){
   if(isAdmin) return true;
   const pw = prompt("管理者パスワードを入力してください");
   if(pw===null) return false;
   if(pw===adminPasswordCurrent){
     isAdmin=true; localStorage.setItem("dutyIsAdmin","true");
-    markAdminInFirestore();
     showToast("管理者モードを解除しました");
     renderDutyPanel();
     return true;
   }
   showToast("パスワードが違います");
   return false;
-}
-async function markAdminInFirestore(){
-  if(!firebaseReady) return;
-  try{
-    const uid = firebase.auth().currentUser && firebase.auth().currentUser.uid;
-    if(!uid) return;
-    await db.collection("admin_sessions").doc(uid).set({
-      grantedAt: firebase.firestore.FieldValue.serverTimestamp()
-    });
-  }catch(e){ /* 失敗してもUI上のロックはそのまま機能するので致命的ではない */ }
 }
 function lockAdmin(){ isAdmin=false; localStorage.removeItem("dutyIsAdmin"); showToast("管理者モードをロックしました"); renderDutyPanel(); }
 
@@ -2727,24 +2668,15 @@ document.getElementById("dutySubNav").addEventListener("click", async (e)=>{
   await renderDutyPanel();
 });
 
-document.getElementById("fatalErrorReloadBtn").addEventListener("click", ()=>{
-  location.reload();
-});
-
 /* ---------- init ---------- */
 (async function init(){
-  if(window.__criticalScriptFailed){ showFatalErrorBanner(); return; }
-  try{
-    await initFirebase();
-    setupConnectionBanner();
-    await Promise.all([loadRoster(), loadSpecialDates(), loadAdminPassword()]);
-    await loadFiscalSettings();
-    await loadFiscalPresets();
-    await loadTab(currentTab);
-    render();
-  }catch(e){
-    showFatalErrorBanner();
-  }
+  await initFirebase();
+  setupConnectionBanner();
+  await Promise.all([loadRoster(), loadSpecialDates(), loadAdminPassword()]);
+  await loadFiscalSettings();
+  await loadFiscalPresets();
+  await loadTab(currentTab);
+  render();
 })();
 </script>
 </html>
