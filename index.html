@@ -360,8 +360,9 @@
 <div id="fatalErrorBanner" style="display:none; position:fixed; inset:0; z-index:9999; background:#26402f; color:#fff; align-items:center; justify-content:center; padding:24px; text-align:center; font-family:'Noto Sans JP',sans-serif;">
   <div style="max-width:340px;">
     <div style="font-size:15px; font-weight:700; margin-bottom:10px;">読み込みに失敗しました</div>
-    <div style="font-size:13px; line-height:1.7; color:#dfe9de; margin-bottom:18px;">通信状況が不安定な可能性があります。もう一度読み込み直してください。</div>
+        <div style="font-size:13px; line-height:1.7; color:#dfe9de; margin-bottom:18px;">通信状況が不安定な可能性があります。もう一度読み込み直してください。</div>
     <button id="fatalErrorReloadBtn" style="border:none; background:#fff; color:#26402f; border-radius:999px; padding:12px 26px; font-size:14px; font-weight:700; cursor:pointer;">🔄 再読み込み</button>
+    <div id="fatalErrorDetail" style="font-size:10.5px; color:#9fb3a2; margin-top:14px; word-break:break-all;"></div>
   </div>
 </div>
 
@@ -508,11 +509,24 @@
       showFatalErrorBanner();
     }
   }
-  function showFatalErrorBanner(){
+  function showFatalErrorBanner(detail){
     const el = document.getElementById("fatalErrorBanner");
     if(el) el.style.display = "flex";
+    if(detail){
+      const d = document.getElementById("fatalErrorDetail");
+      if(d) d.textContent = String(detail).slice(0, 300);
+    }
   }
+  // ここで最初から仕込んでおくことで、後ろのどこでエラーが起きても必ず拾える
+  window.addEventListener("error", (e)=>{
+    showFatalErrorBanner((e && e.message) ? e.message : String(e));
+  });
+  window.addEventListener("unhandledrejection", (e)=>{
+    const r = e && e.reason;
+    showFatalErrorBanner(r && r.message ? r.message : String(r));
+  });
 </script>
+
 <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-app-compat.js" onerror="__onCriticalScriptError()"></script>
 <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-firestore-compat.js" onerror="__onCriticalScriptError()"></script>
 <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-auth-compat.js" onerror="__onCriticalScriptError()"></script>
@@ -2716,8 +2730,6 @@ document.getElementById("dutySubNav").addEventListener("click", async (e)=>{
 document.getElementById("fatalErrorReloadBtn").addEventListener("click", ()=>{
   location.reload();
 });
-window.addEventListener("error", ()=>{ showFatalErrorBanner(); });
-window.addEventListener("unhandledrejection", ()=>{ showFatalErrorBanner(); });
 
 /* ---------- init ---------- */
 (async function init(){
