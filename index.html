@@ -570,7 +570,7 @@ async function initFirebase(){
   try{
     firebase.initializeApp(firebaseConfig);
     db = firebase.firestore();
-    try{ db.enablePersistence({ synchronizeTabs:true }); }catch(e){ /* 複数タブ or 非対応ブラウザは無視 */ }
+    db.enablePersistence({ synchronizeTabs:true }).catch(e=>{ /* 複数タブ or 非対応ブラウザ(iPad Safari等)は無視 */ });
     await new Promise((resolve, reject)=>{
       firebase.auth().onAuthStateChanged(user=>{
         if(user){ resolve(); }
