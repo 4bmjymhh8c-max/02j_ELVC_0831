@@ -15,6 +15,8 @@
 <meta name="apple-mobile-web-app-title" content="圃場管理">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Zen+Maru+Gothic:wght@500;700;900&family=Noto+Sans+JP:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="preconnect" href="https://www.gstatic.com" crossorigin>
+<link rel="preconnect" href="https://firestore.googleapis.com" crossorigin>
 <style>
   :root{
     --soil-900:#26402f;
@@ -239,6 +241,21 @@
   }
   .toast.show{opacity:1; transform:translateX(-50%) translateY(0);}
 
+  .app-loading-overlay{
+    position:fixed; inset:0; z-index:9999;
+    background:var(--sand-100);
+    display:flex; flex-direction:column; align-items:center; justify-content:center; gap:14px;
+    transition:opacity .25s ease;
+  }
+  .app-loading-overlay.hide{ opacity:0; pointer-events:none; }
+  .app-loading-spinner{
+    width:38px; height:38px; border-radius:50%;
+    border:4px solid var(--leaf-100); border-top-color:var(--leaf-600);
+    animation:app-loading-spin .8s linear infinite;
+  }
+  @keyframes app-loading-spin{ to{ transform:rotate(360deg); } }
+  .app-loading-text{ font-family:"Zen Maru Gothic",sans-serif; font-size:13px; color:var(--ink-soft); }
+
   .modal-overlay{
     position:fixed; inset:0; background:rgba(35,50,39,.45); z-index:70;
     display:none; align-items:flex-end; justify-content:center;
@@ -356,6 +373,11 @@
 </style>
 </head>
 <body>
+
+<div class="app-loading-overlay" id="appLoadingOverlay">
+  <div class="app-loading-spinner"></div>
+  <div class="app-loading-text">読み込み中…</div>
+</div>
 
 <header class="top">
   <div class="brand-row">
@@ -492,8 +514,31 @@
 <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-firestore-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-auth-compat.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script>
+/* html2canvas / jsPDF はPDF出力機能でしか使わないため、
+   ページ読み込み時ではなく実際にPDF出力ボタンが押された時にだけ読み込む(初期表示を軽くするため) */
+let _pdfLibsPromise = null;
+function loadPdfLibs(){
+  if(_pdfLibsPromise) return _pdfLibsPromise;
+  function loadScript(src){
+    return new Promise((resolve, reject)=>{
+      const s = document.createElement("script");
+      s.src = src;
+      s.onload = resolve;
+      s.onerror = ()=>reject(new Error("failed to load "+src));
+      document.head.appendChild(s);
+    });
+  }
+  _pdfLibsPromise = Promise.all([
+    loadScript("https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"),
+    loadScript("https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js")
+  ]).catch(e=>{
+    _pdfLibsPromise = null; // 失敗時は次回また読み込み直せるようにする
+    throw e;
+  });
+  return _pdfLibsPromise;
+}
+</script>
 <script>
 /* =========================================================================
    Firebase 設定
@@ -706,6 +751,7 @@ function escapeHtml(str){
   showToast("PDFを作成しています…");
   const printBtn = target.querySelector("[data-print-month]");
   try{
+    await loadPdfLibs();
     if(printBtn) printBtn.style.visibility = "hidden";
     const canvas = await html2canvas(target, { scale:2, backgroundColor:"#ffffff", useCORS:true });
     if(printBtn) printBtn.style.visibility = "";
@@ -2670,13 +2716,22 @@ document.getElementById("dutySubNav").addEventListener("click", async (e)=>{
 
 /* ---------- init ---------- */
 (async function init(){
-  await initFirebase();
-  setupConnectionBanner();
-  await Promise.all([loadRoster(), loadSpecialDates(), loadAdminPassword()]);
-  await loadFiscalSettings();
-  await loadFiscalPresets();
-  await loadTab(currentTab);
-  render();
+  try{
+    await initFirebase();
+    setupConnectionBanner();
+    // loadFiscalPresetsはloadFiscalSettingsの結果(移行処理)に依存するため、
+    // それ以外の読み込みと一緒に並列化して待ち時間を短縮する
+    await Promise.all([loadRoster(), loadSpecialDates(), loadAdminPassword(), loadFiscalSettings()]);
+    await loadFiscalPresets();
+    await loadTab(currentTab);
+    render();
+  }catch(e){
+    // 何が起きても読み込み中表示だけは残さないようにする
+    showToast("読み込み中にエラーが発生しました。再読み込みしてください");
+  }finally{
+    const overlay = document.getElementById("appLoadingOverlay");
+    if(overlay) overlay.classList.add("hide");
+  }
 })();
 </script>
 </html>
