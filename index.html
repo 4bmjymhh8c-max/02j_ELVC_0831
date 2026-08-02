@@ -101,7 +101,7 @@
     background:rgba(255,255,255,.06);
     margin:8px 0 0; padding:7px 11px; border-radius:12px;
   }
-  .sprout-svg{flex:0 0 auto; width:30px; height:34px;}
+  .sprout-svg{flex:0 0 auto; width:30px; height:30px;}
   .progress-text{flex:1; min-width:0;}
   .progress-text .big{font-family:"Zen Maru Gothic",sans-serif; font-weight:900; font-size:14px; color:#fff; white-space:nowrap;}
   .progress-text .small{display:block; font-size:11px; color:#dfe9de; margin-top:4px; font-weight:600; min-height:14px; line-height:1.4;}
@@ -399,7 +399,7 @@
     <div class="date-select" id="dateSelect"></div>
 
     <div class="sprout-wrap">
-      <svg class="sprout-svg" id="sprout" width="46" height="52" viewBox="0 0 46 52"></svg>
+            <svg class="sprout-svg" id="sprout" width="42" height="42" viewBox="0 0 42 42"></svg>
       <div class="progress-text">
         <div class="big" id="progressBig">0 / 0</div>
         <div class="small" id="progressSmall">完了したタスク</div>
@@ -1475,24 +1475,15 @@ function updateProgress(total,done){
 }
 function drawSprout(pct){
   const svg=document.getElementById("sprout");
-  const stemH=10+(pct/100)*28;
-  const leafCount = pct>=100?4: pct>=66?3: pct>=33?2: pct>0?1:0;
-  const leafColor = pct>=100 ? "#c9e7a8" : "#8fc79a";
-  let leaves="";
-  const positions=[
-    {x:23,y:52-stemH*0.35,rot:-35},
-    {x:23,y:52-stemH*0.6,rot:35},
-    {x:23,y:52-stemH*0.85,rot:-30},
-    {x:23,y:52-stemH,rot:20}
-  ];
-  for(let i=0;i<leafCount;i++){
-    const p=positions[i];
-    leaves+=`<ellipse cx="${p.x}" cy="${p.y}" rx="9" ry="5" fill="${leafColor}" transform="rotate(${p.rot} ${p.x} ${p.y})" opacity="0.95"/>`;
-  }
+  const r=16, cx=21, cy=21, circ=2*Math.PI*r;
+  const off = circ*(1-pct/100);
+  const color = pct>=100 ? "#c9e7a8" : "#8fc79a";
   svg.innerHTML=`
-    <line x1="23" y1="52" x2="23" y2="${52-stemH}" stroke="#a3785a" stroke-width="3" stroke-linecap="round"/>
-    ${leaves}
-    <circle cx="23" cy="${52-stemH}" r="3.2" fill="#e7c15a"/>
+    <circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="rgba(255,255,255,.15)" stroke-width="6"/>
+    <circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="${color}" stroke-width="6"
+      stroke-linecap="round" stroke-dasharray="${circ}" stroke-dashoffset="${off}"
+      transform="rotate(-90 ${cx} ${cy})" style="transition:stroke-dashoffset .3s ease;"/>
+    <text x="${cx}" y="${cy+4}" text-anchor="middle" font-size="11" font-weight="900" fill="#fff">${pct}</text>
   `;
 }
 
