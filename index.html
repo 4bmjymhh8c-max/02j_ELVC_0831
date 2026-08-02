@@ -2479,7 +2479,7 @@ function openSpecialDateModal(){
       showToast("保存しました");
       renderSpecialDateList();
       renderDutyPanel();
-    }catch(e){ showToast("保存に失敗しました"); }
+      }catch(e){ console.error(e); showToast("保存に失敗しました: "+(e&&e.message?e.message:e)); }
   });
   document.getElementById("specialDateModal").classList.add("show");
 }
