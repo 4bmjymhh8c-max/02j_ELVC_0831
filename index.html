@@ -1469,7 +1469,7 @@ function updateProgress(total,done){
   const pct = total>0 ? Math.round(done/total*100) : 0;
   document.getElementById("barFill").style.width=pct+"%";
   document.getElementById("progressSmall").textContent =
-    isHistoryMode() ? "その日の完了タスク" :
+    isHistoryMode() ? "完了したタスク" :
     (pct===100 && total>0 ? `${INITIAL_DATA[currentTab].label}を完了しました。おつかれさまでした🍵` : "完了したタスク");
   drawSprout(pct);
 }
