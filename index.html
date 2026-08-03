@@ -274,6 +274,13 @@
   .backup-item .info{font-size:13px; color:var(--ink);}
   .backup-item .info small{display:block; color:var(--ink-soft); font-size:11px; margin-top:2px;}
   .backup-item button{border:none; background:var(--leaf-100); color:var(--leaf-600); border-radius:9px; padding:8px 13px; font-size:12.5px; font-weight:600; cursor:pointer; flex:0 0 auto; min-height:36px;}
+  .backup-pager{ display:flex; align-items:center; justify-content:center; gap:14px; padding:12px 4px 2px; }
+  .backup-pager button{
+    border:none; background:var(--leaf-100); color:var(--leaf-600); border-radius:9px;
+    padding:8px 14px; font-size:12.5px; font-weight:600; cursor:pointer; min-height:34px;
+  }
+  .backup-pager button:disabled{ background:#efece2; color:var(--ink-soft); opacity:.6; cursor:default; }
+  .backup-pager .backup-pager-label{ font-size:12px; color:var(--ink-soft); white-space:nowrap; }
   .modal-close{
     display:block; width:100%; margin-top:14px; border:none; background:#efece2; color:var(--ink-soft);
     border-radius:12px; padding:12px; font-size:13.5px; cursor:pointer; font-weight:600;
@@ -1564,6 +1571,9 @@ function scheduleAutoBackup(tab){
     if(tab===currentTab) createBackup(true);
   }, AUTO_BACKUP_DEBOUNCE_MS);
 }
+const BACKUP_PAGE_SIZE = 20;
+let restoreBackupDocs = [];
+let restoreBackupPage = 0;
 async function openRestoreModal(){
   if(isHistoryMode()) return;
   const listEl=document.getElementById("backupList");
@@ -1576,34 +1586,58 @@ async function openRestoreModal(){
   }
   try{
     const q = await backupsCol(currentTab).orderBy("createdAt","desc").limit(BACKUP_LIMIT).get();
-    if(q.empty){
+    restoreBackupDocs = q.docs;
+    restoreBackupPage = 0;
+    if(restoreBackupDocs.length===0){
       listEl.innerHTML=`<div class="empty-note">まだバックアップがありません</div>`;
       return;
     }
-    listEl.innerHTML="";
-    q.docs.forEach(doc=>{
-      const data = doc.data();
-      const ts = data.createdAt && data.createdAt.toDate ? data.createdAt.toDate() : new Date();
-      const label = `${ts.getMonth()+1}/${ts.getDate()} ${pad(ts.getHours())}:${pad(ts.getMinutes())} ${data.auto ? "(自動保存)" : "(手動保存)"}`;
-      const item=document.createElement("div");
-      item.className="backup-item";
-      item.innerHTML=`<div class="info">${label}<small>タップして内容を確認できます</small></div><button data-preview-key="${doc.id}">プレビュー</button>`;
-      listEl.appendChild(item);
-    });
-    listEl.querySelectorAll("[data-preview-key]").forEach(btn=>{
-      btn.addEventListener("click", async ()=>{
-        const key=btn.getAttribute("data-preview-key");
-        listEl.innerHTML=`<div class="empty-note">読み込み中…</div>`;
-        try{
-          const doc = await backupsCol(currentTab).doc(key).get();
-          renderBackupPreview(doc.data());
-        }catch(e){
-          listEl.innerHTML=`<div class="empty-note">読み込みに失敗しました</div>`;
-        }
-      });
-    });
+    renderBackupListPage();
   }catch(e){
     listEl.innerHTML=`<div class="empty-note">読み込みに失敗しました<br><small style="word-break:break-all;">${escapeHtml(e && e.message ? e.message : String(e))}</small></div>`;
+  }
+}
+function renderBackupListPage(){
+  const listEl=document.getElementById("backupList");
+  const totalPages = Math.max(1, Math.ceil(restoreBackupDocs.length / BACKUP_PAGE_SIZE));
+  restoreBackupPage = Math.min(Math.max(restoreBackupPage,0), totalPages-1);
+  const start = restoreBackupPage * BACKUP_PAGE_SIZE;
+  const pageDocs = restoreBackupDocs.slice(start, start + BACKUP_PAGE_SIZE);
+  listEl.innerHTML="";
+  pageDocs.forEach(doc=>{
+    const data = doc.data();
+    const ts = data.createdAt && data.createdAt.toDate ? data.createdAt.toDate() : new Date();
+    const label = `${ts.getMonth()+1}/${ts.getDate()} ${pad(ts.getHours())}:${pad(ts.getMinutes())} ${data.auto ? "(自動保存)" : "(手動保存)"}`;
+    const item=document.createElement("div");
+    item.className="backup-item";
+    item.innerHTML=`<div class="info">${label}<small>タップして内容を確認できます</small></div><button data-preview-key="${doc.id}">プレビュー</button>`;
+    listEl.appendChild(item);
+  });
+  listEl.querySelectorAll("[data-preview-key]").forEach(btn=>{
+    btn.addEventListener("click", async ()=>{
+      const key=btn.getAttribute("data-preview-key");
+      listEl.innerHTML=`<div class="empty-note">読み込み中…</div>`;
+      try{
+        const doc = await backupsCol(currentTab).doc(key).get();
+        renderBackupPreview(doc.data());
+      }catch(e){
+        listEl.innerHTML=`<div class="empty-note">読み込みに失敗しました</div>`;
+      }
+    });
+  });
+  if(totalPages>1){
+    const pager=document.createElement("div");
+    pager.className="backup-pager";
+    pager.innerHTML=`
+      <button id="backupPagerPrev" ${restoreBackupPage===0?"disabled":""}>← 前へ</button>
+      <span class="backup-pager-label">${restoreBackupPage+1} / ${totalPages}</span>
+      <button id="backupPagerNext" ${restoreBackupPage>=totalPages-1?"disabled":""}>次へ →</button>
+    `;
+    listEl.appendChild(pager);
+    const prevBtn = pager.querySelector("#backupPagerPrev");
+    const nextBtn = pager.querySelector("#backupPagerNext");
+    if(prevBtn) prevBtn.addEventListener("click", ()=>{ restoreBackupPage--; renderBackupListPage(); });
+    if(nextBtn) nextBtn.addEventListener("click", ()=>{ restoreBackupPage++; renderBackupListPage(); });
   }
 }
 
@@ -1627,7 +1661,7 @@ function renderBackupPreview(payload){
       <button id="backupPreviewRestore" style="flex:1; border:none; background:var(--leaf-600); color:#fff; border-radius:10px; padding:11px; font-weight:600; cursor:pointer;">この内容で復元する</button>
     </div>
   `;
-  document.getElementById("backupPreviewBack").addEventListener("click", ()=>openRestoreModal());
+  document.getElementById("backupPreviewBack").addEventListener("click", ()=>renderBackupListPage());
   document.getElementById("backupPreviewRestore").addEventListener("click", async ()=>{
     if(!confirm("このバックアップの内容で復元します。今の内容は上書きされます。よろしいですか？")) return;
     try{
@@ -2112,54 +2146,80 @@ function scheduleDutyAutoBackup(){
   clearTimeout(dutyAutoBackupState.timer);
   dutyAutoBackupState.timer = setTimeout(()=>createDutyBackup(true), 4000);
 }
+let dutyBackupDocs = [];
+let dutyBackupPage = 0;
 async function openDutyRestoreModal(){
   const listEl = document.getElementById("dutyBackupList");
   listEl.innerHTML = `<div class="empty-note">読み込み中…</div>`;
   document.getElementById("dutyRestoreModal").classList.add("show");
   try{
     const q = await dutyBackupsCol().orderBy("createdAt","desc").limit(30).get();
-    if(q.empty){
+    dutyBackupDocs = q.docs;
+    dutyBackupPage = 0;
+    if(dutyBackupDocs.length===0){
       listEl.innerHTML = `<div class="empty-note">まだバックアップがありません</div>`;
       return;
     }
-    listEl.innerHTML = "";
-    q.docs.forEach(doc=>{
-      const data = doc.data();
-      const ts = data.createdAt && data.createdAt.toDate ? data.createdAt.toDate() : new Date();
-      const label = `${ts.getMonth()+1}/${ts.getDate()} ${pad(ts.getHours())}:${pad(ts.getMinutes())} ${data.auto?"(自動保存)":"(手動保存)"}`;
-      const item = document.createElement("div");
-      item.className = "backup-item";
-      item.innerHTML = `<div class="info">${label}<small>復元すると名簿・特例日・年度設定が入れ替わります</small></div><button data-duty-restore="${doc.id}">復元</button>`;
-      listEl.appendChild(item);
-    });
-    listEl.querySelectorAll("[data-duty-restore]").forEach(btn=>{
-      btn.addEventListener("click", async ()=>{
-        if(!confirm("このバックアップの内容で復元します。今の名簿・特例日・年度設定は上書きされます。よろしいですか？")) return;
-        try{
-          const snap = await dutyBackupsCol().doc(btn.getAttribute("data-duty-restore")).get();
-          const data = snap.data();
-          pushDutyUndo();
-          roster = data.roster || roster;
-          fiscalStartMonth = typeof data.fiscalStartMonth==="number" ? data.fiscalStartMonth : fiscalStartMonth;
-                fiscalStartYear = typeof data.fiscalStartYear==="number" ? data.fiscalStartYear : fiscalStartYear;
-                fiscalEndMonth = typeof data.fiscalEndMonth==="number" ? data.fiscalEndMonth : fiscalEndMonth;
-                fiscalEndYear = typeof data.fiscalEndYear==="number" ? data.fiscalEndYear : fiscalEndYear;
-          await saveRoster();
-          await saveFiscalSettings();
-          await saveFiscalSettings();
-          if(Array.isArray(data.fiscalPresets)){
-            fiscalPresets = data.fiscalPresets;
-            await saveFiscalPresets();
-          }
-          await applySpecialDatesSnapshot(data.specialDates || {});
-          document.getElementById("dutyRestoreModal").classList.remove("show");
-          renderDutyPanel();
-          showToast("復元しました");
-        }catch(e){ showToast("復元に失敗しました"); }
-      });
-    });
+    renderDutyBackupListPage();
   }catch(e){
-    listEl.innerHTML = `<div class="empty-note">読み込みに失敗しました<br><small style="word-break:break-all;">${escapeHtml(e && e.message ? e.message : String(e))}</small></div>`;
+    listEl.innerHTML = `<div class="empty-note">読み込みに失敗しました</div>`;
+  }
+}
+function renderDutyBackupListPage(){
+  const listEl = document.getElementById("dutyBackupList");
+  const totalPages = Math.max(1, Math.ceil(dutyBackupDocs.length / BACKUP_PAGE_SIZE));
+  dutyBackupPage = Math.min(Math.max(dutyBackupPage,0), totalPages-1);
+  const start = dutyBackupPage * BACKUP_PAGE_SIZE;
+  const pageDocs = dutyBackupDocs.slice(start, start + BACKUP_PAGE_SIZE);
+  listEl.innerHTML = "";
+  pageDocs.forEach(doc=>{
+    const data = doc.data();
+    const ts = data.createdAt && data.createdAt.toDate ? data.createdAt.toDate() : new Date();
+    const label = `${ts.getMonth()+1}/${ts.getDate()} ${pad(ts.getHours())}:${pad(ts.getMinutes())} ${data.auto?"(自動保存)":"(手動保存)"}`;
+    const item = document.createElement("div");
+    item.className = "backup-item";
+    item.innerHTML = `<div class="info">${label}<small>復元すると名簿・特例日・年度設定が入れ替わります</small></div><button data-duty-restore="${doc.id}">復元</button>`;
+    listEl.appendChild(item);
+  });
+  listEl.querySelectorAll("[data-duty-restore]").forEach(btn=>{
+    btn.addEventListener("click", async ()=>{
+      if(!confirm("このバックアップの内容で復元します。今の名簿・特例日・年度設定は上書きされます。よろしいですか？")) return;
+      try{
+        const snap = await dutyBackupsCol().doc(btn.getAttribute("data-duty-restore")).get();
+        const data = snap.data();
+        pushDutyUndo();
+        roster = data.roster || roster;
+        fiscalStartMonth = typeof data.fiscalStartMonth==="number" ? data.fiscalStartMonth : fiscalStartMonth;
+              fiscalStartYear = typeof data.fiscalStartYear==="number" ? data.fiscalStartYear : fiscalStartYear;
+              fiscalEndMonth = typeof data.fiscalEndMonth==="number" ? data.fiscalEndMonth : fiscalEndMonth;
+              fiscalEndYear = typeof data.fiscalEndYear==="number" ? data.fiscalEndYear : fiscalEndYear;
+        await saveRoster();
+        await saveFiscalSettings();
+        await saveFiscalSettings();
+        if(Array.isArray(data.fiscalPresets)){
+          fiscalPresets = data.fiscalPresets;
+          await saveFiscalPresets();
+        }
+        await applySpecialDatesSnapshot(data.specialDates || {});
+        document.getElementById("dutyRestoreModal").classList.remove("show");
+        renderDutyPanel();
+        showToast("復元しました");
+      }catch(e){ showToast("復元に失敗しました"); }
+    });
+  });
+  if(totalPages>1){
+    const pager=document.createElement("div");
+    pager.className="backup-pager";
+    pager.innerHTML=`
+      <button id="dutyBackupPagerPrev" ${dutyBackupPage===0?"disabled":""}>← 前へ</button>
+      <span class="backup-pager-label">${dutyBackupPage+1} / ${totalPages}</span>
+      <button id="dutyBackupPagerNext" ${dutyBackupPage>=totalPages-1?"disabled":""}>次へ →</button>
+    `;
+    listEl.appendChild(pager);
+    const prevBtn = pager.querySelector("#dutyBackupPagerPrev");
+    const nextBtn = pager.querySelector("#dutyBackupPagerNext");
+    if(prevBtn) prevBtn.addEventListener("click", ()=>{ dutyBackupPage--; renderDutyBackupListPage(); });
+    if(nextBtn) nextBtn.addEventListener("click", ()=>{ dutyBackupPage++; renderDutyBackupListPage(); });
   }
 }
 document.getElementById("dutyUndoBtn").addEventListener("click", ()=>{
