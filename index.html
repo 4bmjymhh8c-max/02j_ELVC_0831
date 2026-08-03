@@ -280,6 +280,26 @@
   }
   .empty-note{text-align:center; color:var(--ink-soft); font-size:12.5px; padding:14px 10px 4px;}
 
+  /* ---- 復元用パスコード入力 ---- */
+  .passcode-dots{ display:flex; justify-content:center; gap:14px; margin:6px 0 20px; }
+  .passcode-dots .dot{ width:16px; height:16px; border-radius:50%; border:2px solid var(--leaf-500); background:#fff; transition:background .12s; box-sizing:border-box; }
+  .passcode-dots .dot.filled{ background:var(--leaf-600); border-color:var(--leaf-600); }
+  .passcode-dots.shake{ animation:passcode-shake .35s; }
+  @keyframes passcode-shake{
+    10%,90%{ transform:translateX(-2px); }
+    20%,80%{ transform:translateX(4px); }
+    30%,50%,70%{ transform:translateX(-8px); }
+    40%,60%{ transform:translateX(8px); }
+  }
+  .passcode-error{ text-align:center; color:var(--alert); font-size:12.5px; min-height:16px; margin-bottom:6px; }
+  .passcode-keypad{ display:grid; grid-template-columns:repeat(3,1fr); gap:10px; max-width:280px; margin:0 auto; }
+  .passcode-keypad button{
+    border:none; background:var(--sand-100); color:var(--soil-800); font-size:20px; font-weight:700;
+    border-radius:14px; padding:16px 0; cursor:pointer; font-family:"Zen Maru Gothic",sans-serif;
+  }
+  .passcode-keypad button:active{ background:var(--leaf-100); }
+  .passcode-keypad button.passcode-empty{ background:transparent; cursor:default; }
+
   .config-banner{
     background:#fff3e0; border:1px solid #f0c98a; color:#7a4b12; border-radius:12px;
     padding:12px 14px; margin:0 0 12px; font-size:12.5px; line-height:1.6;
@@ -441,6 +461,24 @@
     <div class="modal-sub" id="restoreSub">このタブの保存済みバックアップ一覧</div>
     <div id="backupList"></div>
     <button class="modal-close" id="closeModal">閉じる</button>
+  </div>
+</div>
+
+<div class="modal-overlay" id="restorePasscodeModal">
+  <div class="modal-sheet">
+    <div class="modal-title">復元用パスコード</div>
+    <div class="modal-sub" id="restorePasscodeSub">復元するには4桁のパスコードを入力してください</div>
+    <div class="passcode-dots" id="restorePasscodeDots">
+      <span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="dot"></span>
+    </div>
+    <div class="passcode-error" id="restorePasscodeError"></div>
+    <div class="passcode-keypad" id="restorePasscodeKeypad">
+      <button data-key="1">1</button><button data-key="2">2</button><button data-key="3">3</button>
+      <button data-key="4">4</button><button data-key="5">5</button><button data-key="6">6</button>
+      <button data-key="7">7</button><button data-key="8">8</button><button data-key="9">9</button>
+      <button class="passcode-empty" disabled></button><button data-key="0">0</button><button data-key="back">⌫</button>
+    </div>
+    <button class="modal-close" id="closeRestorePasscodeModal">閉じる</button>
   </div>
 </div>
 
@@ -1624,8 +1662,7 @@ document.getElementById("undoBtn").addEventListener("click", ()=>{
 });
 document.getElementById("backupBtn").addEventListener("click", ()=>createBackup(false));
 document.getElementById("restoreBtn").addEventListener("click", ()=>{
-  if(!unlockAdmin()) return;
-  openRestoreModal();
+  openRestorePasscodeModal(()=> openRestoreModal());
 });
 document.getElementById("editModeBtn").addEventListener("click", ()=>{
   editMode = !editMode;
@@ -1686,6 +1723,113 @@ function unlockAdmin(){
   return false;
 }
 function lockAdmin(){ isAdmin=false; localStorage.removeItem("dutyIsAdmin"); showToast("管理者モードをロックしました"); renderDutyPanel(); }
+
+/* ---- 復元専用パスコード(管理者パスワードとは独立。圃場管理の「復元」ボタン用) ---- */
+const RESTORE_PASSCODE_DEFAULT = "1234"; // 初期パスコード（変更後はFirestore上の値が優先されます）
+let restorePasscodeCurrent = RESTORE_PASSCODE_DEFAULT;
+function restoreAuthRef(){ return db.collection("duty_settings").doc("restoreAuth"); }
+async function loadRestorePasscode(){
+  try{
+    const snap = await restoreAuthRef().get();
+    if(snap.exists && typeof snap.data().passcode==="string" && /^\d{4}$/.test(snap.data().passcode)){
+      restorePasscodeCurrent = snap.data().passcode;
+    }
+  }catch(e){ /* オフライン時などは既定値のまま */ }
+}
+async function setRestorePasscode(newCode){
+  try{
+    await restoreAuthRef().set({ passcode: newCode });
+    restorePasscodeCurrent = newCode;
+    return true;
+  }catch(e){
+    showToast("パスコードの変更に失敗しました。通信を確認してください");
+    return false;
+  }
+}
+
+let restorePasscodeInput = "";
+let restorePasscodeOnSuccess = null;
+let restorePasscodeMode = "unlock"; // "unlock" | "setNew" | "confirmNew"
+let restorePasscodeFirstNew = "";
+
+function renderRestorePasscodeDots(){
+  document.querySelectorAll("#restorePasscodeDots .dot").forEach((d,i)=>{
+    d.classList.toggle("filled", i < restorePasscodeInput.length);
+  });
+}
+function shakeRestorePasscodeDots(msg){
+  const wrap = document.getElementById("restorePasscodeDots");
+  wrap.classList.remove("shake"); void wrap.offsetWidth; wrap.classList.add("shake");
+  document.getElementById("restorePasscodeError").textContent = msg;
+  restorePasscodeInput = "";
+  renderRestorePasscodeDots();
+}
+function openRestorePasscodeModal(onSuccess){
+  restorePasscodeInput = "";
+  restorePasscodeMode = "unlock";
+  restorePasscodeOnSuccess = onSuccess;
+  document.getElementById("restorePasscodeError").textContent = "";
+  document.getElementById("restorePasscodeSub").textContent = "復元するには4桁のパスコードを入力してください";
+  renderRestorePasscodeDots();
+  document.getElementById("restorePasscodeModal").classList.add("show");
+}
+function startChangeRestorePasscode(){
+  restorePasscodeInput = "";
+  restorePasscodeMode = "setNew";
+  restorePasscodeFirstNew = "";
+  restorePasscodeOnSuccess = null;
+  document.getElementById("restorePasscodeError").textContent = "";
+  document.getElementById("restorePasscodeSub").textContent = "新しい4桁のパスコードを入力してください";
+  renderRestorePasscodeDots();
+  document.getElementById("restorePasscodeModal").classList.add("show");
+}
+document.getElementById("restorePasscodeKeypad").addEventListener("click", async (e)=>{
+  const btn = e.target.closest("button[data-key]");
+  if(!btn) return;
+  const key = btn.getAttribute("data-key");
+  if(key==="back"){
+    restorePasscodeInput = restorePasscodeInput.slice(0,-1);
+    renderRestorePasscodeDots();
+    return;
+  }
+  if(restorePasscodeInput.length>=4) return;
+  restorePasscodeInput += key;
+  renderRestorePasscodeDots();
+  if(restorePasscodeInput.length<4) return;
+
+  if(restorePasscodeMode==="unlock"){
+    if(restorePasscodeInput===restorePasscodeCurrent){
+      document.getElementById("restorePasscodeModal").classList.remove("show");
+      const cb = restorePasscodeOnSuccess;
+      restorePasscodeOnSuccess = null;
+      if(cb) cb();
+    }else{
+      shakeRestorePasscodeDots("パスコードが違います");
+    }
+  }else if(restorePasscodeMode==="setNew"){
+    restorePasscodeFirstNew = restorePasscodeInput;
+    restorePasscodeInput = "";
+    restorePasscodeMode = "confirmNew";
+    document.getElementById("restorePasscodeError").textContent = "";
+    document.getElementById("restorePasscodeSub").textContent = "確認のため、もう一度入力してください";
+    renderRestorePasscodeDots();
+  }else if(restorePasscodeMode==="confirmNew"){
+    if(restorePasscodeInput===restorePasscodeFirstNew){
+      const ok = await setRestorePasscode(restorePasscodeInput);
+      document.getElementById("restorePasscodeModal").classList.remove("show");
+      if(ok) showToast("パスコードを変更しました");
+    }else{
+      restorePasscodeMode = "setNew";
+      restorePasscodeFirstNew = "";
+      document.getElementById("restorePasscodeSub").textContent = "新しい4桁のパスコードを入力してください";
+      shakeRestorePasscodeDots("パスコードが一致しません。もう一度入力してください");
+    }
+  }
+});
+document.getElementById("closeRestorePasscodeModal").addEventListener("click", ()=>{
+  document.getElementById("restorePasscodeModal").classList.remove("show");
+  restorePasscodeOnSuccess = null;
+});
 
 /* ---- 名簿(ロースター) ---- */
 const ROSTER_DEFAULT = ["木下","清水","杉山","鈴木","諏訪田","瀬川","中野翔","伊藤","中野真","辻","増田","藤井","河野","新宮","杉本","滝口","中村","橋本","和田"];
@@ -2386,6 +2530,7 @@ async function renderScorePanel(el){
         ${isAdmin ? `<button class="lock-btn" id="rosterBtn">🔒 名簿を管理</button>` : ``}
         ${isAdmin ? `<button class="lock-btn" id="specialDateBtn">🔒 特例日を管理</button>` : ``}
         ${isAdmin ? `<button class="lock-btn" id="pwChangeBtn">🔒 パスワード変更</button>` : ``}
+        ${isAdmin ? `<button class="lock-btn" id="restorePwChangeBtn">🔒 復元パスコード変更</button>` : ``}
       </span>
     </div>
     <div class="me-bar">
@@ -2423,6 +2568,13 @@ async function renderScorePanel(el){
     pwChangeBtnEl.addEventListener("click", ()=>{
       if(!unlockAdmin()) return;
       changeAdminPassword();
+    });
+  }
+  const restorePwChangeBtnEl = document.getElementById("restorePwChangeBtn");
+  if(restorePwChangeBtnEl){
+    restorePwChangeBtnEl.addEventListener("click", ()=>{
+      if(!unlockAdmin()) return;
+      startChangeRestorePasscode();
     });
   }
   document.getElementById("periodSelect").addEventListener("change", (e)=>{
@@ -2712,7 +2864,7 @@ document.getElementById("dutySubNav").addEventListener("click", async (e)=>{
     setupConnectionBanner();
     // loadFiscalPresetsはloadFiscalSettingsの結果(移行処理)に依存するため、
     // それ以外の読み込みと一緒に並列化して待ち時間を短縮する
-    await Promise.all([loadRoster(), loadSpecialDates(), loadAdminPassword(), loadFiscalSettings()]);
+    await Promise.all([loadRoster(), loadSpecialDates(), loadAdminPassword(), loadRestorePasscode(), loadFiscalSettings()]);
     await loadFiscalPresets();
     await loadTab(currentTab);
     render();
