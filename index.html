@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, viewport-fit=cover">
-<title>圃場管理</title>
+<title>圃場管理システム ATLAS</title>
 <meta name="robots" content="noindex, nofollow">
 <link rel="icon" type="image/png" href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAIAAAD8GO2jAAAEvElEQVR4nN2Wy48UVRTGv+8+qqqrq+fRPS8EHI3BF4pGSQzgA2Pic6OS6MqNbtzowsT/wY1LNxrj1p2JQV2QiIkSovENQRkQIugw0sPM9Ew33VV17z0ucLQZZpgxkY03taik6n6/+917zrmHN++9C9dyqGuq/r8AmKt8I0FSAAhEhKSI/GcAkt75svAklaIy9C7YyFBRwr/ArA6gYtFz9dFs0+SQrerGplp9pPbzV7//+OWvIOLYbNwJrwxTkt77JIleeHWvGeLFbs9oMz44rJQ6+0vz0w+PnD09q43aIGOVQxYR7+TR5+6OhnVrrpN3XaoTBBR5OTY5tO/lXZtvbBS5p+JGACu3iERZ+Ef23bnllnpzdsFonUZxmsSzi61unudFmWbx6Nbar1NNEkJgPR8rHYjAWN3YknW6PauNALG1AEimcVJJYleGye2jldS6wgcnin+NjToAAMK7ICIC0UpVkwrJelZzIQwxy/OiVq1k19XqjUp7oXfq+IWKIgUm1quaWQUgQYrcXVqTiAQJirb07o/5uUZWM7VUXezdqvXIvRMaHJnrnR+txMPJuaNN9pxcYWUlQATa6Di1IgAowGyrVYnjoWpGcNblNxyb/0kVO+67Luq4uaH4sae2XRirbDk8807Xn1GsAf7qZ6AUi5777rPTWisSEqT0XlNRUFi149CZJ94/uu/gb0ZzZjjOybOD0dipxcdPL703MniPNUsiej0HohSnvp1OMrPr8Vu988PVWhbFCyps/37m/sPnOlV7/R/d208uDo5Vtp1ZWsxsXIRWpOpFeHMwe3F+8azzCRn+PtAViaYUs3rs2qrbcg88f+M9O7dVkoiJ8dPzD7/9lQWFEMCWYn0ojTI+CFhalRN18kBevNZqZ32APgdE8BJVzIPP3gEdktOTUwdm3zqwf3y4jtHKS1rXSmlHSosQKC2LyFCkMIYQCiywKLI7srcZM+VcZZlh+vTpnds0sjUalNK7tNt4aHz33LnpqZM/+BOVaiNjlnC5zFHAS2HQl2kBGCB3WHPUufRKBwQD/QRvGjg+6abTqDme2/bDE0+fL34vQ3ciiZxg3eJAYEyr/oT4J4pEQI2Z5kz1hzuS5jhscMEN2MaekSd6Pr+kvpH6Vl5eBfsACLFKTnR+PJYfjuMohKCoer6zfWDn1uzuU8VSRLUuIABnvO+P/ZV5YGgOnf+kVcwZZQUC0Eu5e/SpIzIQpMTamySABZohfFe6/jBVl/8kRtklt/BF8yNDAwjBQorN0chcdc+Rolcj3RoABwwqftDNf/Mh7tvMlQ6ChIpOjy99f6z1daKqXpyAImUaTbzRzrsiVdIBAZDlxwMOGFP8PC/fvdjrT4JVAABExDI6NPvxQjlbNQMGxur0wsWpb4reK632tPcNxZQ0gAYsMUAOkft7xeuLbQ+oy2NhlSsTAKFKyUfjzXtGn6zq2sn2ka/nDmqwIzKk1DNJ/GBsN2llgY7ISef394qDeWFJC4QVUmu1jgRLKQExtEXoRSoGqAAHtEVScpi0ZEdkPgQBMhKrxfGabYtALO2ll1ilggAgABoYJgOwIBJE9LJ0WEPnao2XLC9I+qbLcsX/e+Za0usDrj422Bld8970T0LOPQoeUCS9AAAAAElFTkSuQmCC">
 <link rel="shortcut icon" href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAIAAAD8GO2jAAAEvElEQVR4nN2Wy48UVRTGv+8+qqqrq+fRPS8EHI3BF4pGSQzgA2Pic6OS6MqNbtzowsT/wY1LNxrj1p2JQV2QiIkSovENQRkQIugw0sPM9Ew33VV17z0ucLQZZpgxkY03taik6n6/+917zrmHN++9C9dyqGuq/r8AmKt8I0FSAAhEhKSI/GcAkt75svAklaIy9C7YyFBRwr/ArA6gYtFz9dFs0+SQrerGplp9pPbzV7//+OWvIOLYbNwJrwxTkt77JIleeHWvGeLFbs9oMz44rJQ6+0vz0w+PnD09q43aIGOVQxYR7+TR5+6OhnVrrpN3XaoTBBR5OTY5tO/lXZtvbBS5p+JGACu3iERZ+Ef23bnllnpzdsFonUZxmsSzi61unudFmWbx6Nbar1NNEkJgPR8rHYjAWN3YknW6PauNALG1AEimcVJJYleGye2jldS6wgcnin+NjToAAMK7ICIC0UpVkwrJelZzIQwxy/OiVq1k19XqjUp7oXfq+IWKIgUm1quaWQUgQYrcXVqTiAQJirb07o/5uUZWM7VUXezdqvXIvRMaHJnrnR+txMPJuaNN9pxcYWUlQATa6Di1IgAowGyrVYnjoWpGcNblNxyb/0kVO+67Luq4uaH4sae2XRirbDk8807Xn1GsAf7qZ6AUi5777rPTWisSEqT0XlNRUFi149CZJ94/uu/gb0ZzZjjOybOD0dipxcdPL703MniPNUsiej0HohSnvp1OMrPr8Vu988PVWhbFCyps/37m/sPnOlV7/R/d208uDo5Vtp1ZWsxsXIRWpOpFeHMwe3F+8azzCRn+PtAViaYUs3rs2qrbcg88f+M9O7dVkoiJ8dPzD7/9lQWFEMCWYn0ojTI+CFhalRN18kBevNZqZ32APgdE8BJVzIPP3gEdktOTUwdm3zqwf3y4jtHKS1rXSmlHSosQKC2LyFCkMIYQCiywKLI7srcZM+VcZZlh+vTpnds0sjUalNK7tNt4aHz33LnpqZM/+BOVaiNjlnC5zFHAS2HQl2kBGCB3WHPUufRKBwQD/QRvGjg+6abTqDme2/bDE0+fL34vQ3ciiZxg3eJAYEyr/oT4J4pEQI2Z5kz1hzuS5jhscMEN2MaekSd6Pr+kvpH6Vl5eBfsACLFKTnR+PJYfjuMohKCoer6zfWDn1uzuU8VSRLUuIABnvO+P/ZV5YGgOnf+kVcwZZQUC0Eu5e/SpIzIQpMTamySABZohfFe6/jBVl/8kRtklt/BF8yNDAwjBQorN0chcdc+Rolcj3RoABwwqftDNf/Mh7tvMlQ6ChIpOjy99f6z1daKqXpyAImUaTbzRzrsiVdIBAZDlxwMOGFP8PC/fvdjrT4JVAABExDI6NPvxQjlbNQMGxur0wsWpb4reK632tPcNxZQ0gAYsMUAOkft7xeuLbQ+oy2NhlSsTAKFKyUfjzXtGn6zq2sn2ka/nDmqwIzKk1DNJ/GBsN2llgY7ISef394qDeWFJC4QVUmu1jgRLKQExtEXoRSoGqAAHtEVScpi0ZEdkPgQBMhKrxfGabYtALO2ll1ilggAgABoYJgOwIBJE9LJ0WEPnao2XLC9I+qbLcsX/e+Za0usDrj422Bld8970T0LOPQoeUCS9AAAAAElFTkSuQmCC">
@@ -12,7 +12,7 @@
 <meta name="theme-color" content="#26402f">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="圃場管理">
+<meta name="apple-mobile-web-app-title" content="圃場管理システム ATLAS">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Zen+Maru+Gothic:wght@500;700;900&family=Noto+Sans+JP:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="preconnect" href="https://www.gstatic.com" crossorigin>
@@ -58,6 +58,14 @@
     gap:10px;
   }
   .brand{font-weight:900; font-size:15.5px; letter-spacing:.02em;}
+  .brand-sub{
+  font-family: sans-serif;
+  font-weight: 400;
+  font-size: 9.5px;
+  letter-spacing: .02em;
+  opacity: .75;
+  margin-top: 1px;
+}
   .date-pill{
     font-size:11px; color:#e7f0e6; background:rgba(255,255,255,.08);
     padding:4px 9px; border-radius:999px; white-space:nowrap;
@@ -408,7 +416,9 @@
 
 <header class="top">
   <div class="brand-row">
-    <div class="brand">圃場管理</div>
+    <div class="brand">圃場管理システム ATLAS
+      <div class="brand-sub">Agricultural Task and Labor Administration System</div>
+    </div>
     <div class="date-pill" id="datePill">–</div>
   </div>
   <div class="mode-switch" id="modeSwitch">
