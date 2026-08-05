@@ -394,6 +394,7 @@
   .roster-check-row input{ width:19px; height:19px; }
   .roster-check-row label{ flex:1; min-width:0; }
   .roster-count-badge{ flex:0 0 auto; font-size:11px; font-weight:700; color:var(--leaf-600); background:var(--leaf-100); border-radius:999px; padding:3px 9px; white-space:nowrap; }
+  .roster-count-circle{ margin-left:5px; font-size:13px; font-weight:700; color:var(--leaf-600); }
   .cal-day-info{ font-size:12.5px; color:var(--ink-soft); margin-bottom:10px; line-height:1.6; }
   .cal-day-info b{ color:var(--soil-800); }
   @media print{
@@ -800,6 +801,14 @@ function escapeHtml(str){
     .replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;")
     .replace(/"/g,"&quot;").replace(/'/g,"&#39;");
 }
+function circledNumber(n){
+  if(n===0) return "⓪";
+  if(n>=1 && n<=20) return String.fromCodePoint(0x2460 + (n-1));   // ①〜⑳
+  if(n>=21 && n<=35) return String.fromCodePoint(0x3251 + (n-21)); // ㉑〜㉟
+  if(n>=36 && n<=50) return String.fromCodePoint(0x32B1 + (n-36)); // ㊱〜㊿
+  return `(${n})`; // 51回以上は丸数字の文字がないため括弧表記にフォールバック
+}
+
   async function downloadCalendarMonthPdf(idx){
   const target = document.getElementById("calMonthBlock"+idx);
   if(!target) return;
@@ -2865,13 +2874,16 @@ async function openCalendarDayModal(ds){
     bodyEl.innerHTML = infoHtml + `<div class="empty-note">読み込み中…</div>`;
     document.getElementById("calendarDayModal").classList.add("show");
 
-    // その月のこれまでの当番回数を人ごとに集計(割り振りの参考用)
-    const monthDs = monthDates(d.getFullYear(), d.getMonth()).list;
-    await loadCalendarRange(monthDs);
+        // 選択中の集計期間内での、これまでの累計当番回数を人ごとに集計(割り振りの参考用)
+    const allCal = await loadAllCalendarForScore();
+    const currentPeriod = (selectedPeriodId && fiscalPresets.some(p=>p.id===selectedPeriodId))
+      ? fiscalPresets.find(p=>p.id===selectedPeriodId)
+      : (fiscalPresets[0] || null);
     const counts = {};
     roster.forEach(n=>{ counts[n]=0; });
-    monthDs.forEach(otherDs=>{
-      (calendarAssign[otherDs]||[]).forEach(name=>{ counts[name]=(counts[name]||0)+1; });
+    Object.keys(allCal).forEach(otherDs=>{
+      if(currentPeriod && !dateInPeriod(otherDs, currentPeriod)) return;
+      (allCal[otherDs]||[]).forEach(name=>{ counts[name]=(counts[name]||0)+1; });
     });
 
     // この日を希望している人・すでに割り当て済みの人だけを候補にする
@@ -2880,8 +2892,7 @@ async function openCalendarDayModal(ds){
     infoHtml += pickList.length ? pickList.map(n=>`
       <div class="roster-check-row">
         <input type="checkbox" id="calpick-${n}" ${assigned.includes(n)?"checked":""}>
-        <label for="calpick-${n}">${escapeHtml(n)}${wanterNames.includes(n)?" (希望あり)":""}</label>
-        <span class="roster-count-badge">${counts[n]||0}回</span>
+        <label for="calpick-${n}">${escapeHtml(n)}<span class="roster-count-circle" title="累計担当回数">${circledNumber(counts[n]||0)}</span>${wanterNames.includes(n)?" (希望あり)":""}</label>
       </div>`).join("") : `<div class="empty-note">この日を希望している人がいません</div>`;
     infoHtml += `<button id="calDaySave" style="width:100%; margin-top:12px; border:none; background:var(--leaf-600); color:#fff; border-radius:10px; padding:11px; font-weight:700; cursor:pointer;">この内容で保存</button>`;
 
