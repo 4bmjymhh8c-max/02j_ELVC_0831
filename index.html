@@ -406,7 +406,78 @@
   body.printing-calendar .cal-month-block.print-target{ display:block !important; }
   body.printing-calendar .cal-month-block.print-target [data-print-month]{ display:none !important; }
 }
+  /* ================= ダークモード ================= */
+html[data-theme="dark"]{
+  --soil-900:#1b2e21;
+  --soil-800:#24392b;
+  --leaf-600:#6fae78;
+  --leaf-500:#7fa885;
+  --leaf-100:#24392b;
+  --sand-100:#14181a;
+  --card:#1e2422;
+  --bark:#c2a488;
+  --ink:#e8ece7;
+  --ink-soft:#a3ada2;
+  --line:#333d34;
+  --done:#5f9a67;
+  --alert:#e08066;
+  --surface-2:#262e27;
+  --accent-soft:#1c2a20;
+  --warn-bg:#3a2f14;
+  --warn-border:#5c4a1e;
+  --warn-text:#e8c98a;
+}
+
+html[data-theme="dark"] .date-chip.active{ background:var(--surface-2); color:var(--ink); border-color:var(--surface-2); }
+html[data-theme="dark"] .mode-switch button.active{ background:var(--surface-2); color:var(--ink); }
+html[data-theme="dark"] .icon-btn{ color:#8d9a8f; }
+html[data-theme="dark"] .icon-btn:active{ background:var(--surface-2); }
+html[data-theme="dark"] .section-card.all-done{ background:var(--accent-soft); border-color:#2f4a36; }
+html[data-theme="dark"] .check{ border-color:#3c4a3e; background:var(--surface-2); }
+html[data-theme="dark"] .check svg{ color:#0f1512; }
+html[data-theme="dark"] .task-text.checked ~ .task-assignee,
+html[data-theme="dark"] .task-main .task-text.checked + .task-assignee{ color:#6b756c; }
+html[data-theme="dark"] .task-text.checked{ color:#6b756c; }
+html[data-theme="dark"] .task-text.checked a.task-link{ color:#6b756c; }
+html[data-theme="dark"] .task-remove{ color:#7c8579; }
+html[data-theme="dark"] .add-row input{ background:var(--surface-2); border-color:var(--line); color:var(--ink); }
+html[data-theme="dark"] .add-section-card{ border-color:#4a5a4c; }
+html[data-theme="dark"] .add-section-form input{ background:var(--surface-2); border-color:var(--line); color:var(--ink); }
+html[data-theme="dark"] .add-section-form .cancel{ background:var(--surface-2); color:var(--ink-soft); }
+html[data-theme="dark"] .modal-sheet{ background:#1c211d; }
+html[data-theme="dark"] .backup-pager button:disabled{ background:var(--surface-2); }
+html[data-theme="dark"] .modal-close{ background:var(--surface-2); }
+html[data-theme="dark"] .passcode-dots .dot{ background:var(--surface-2); }
+html[data-theme="dark"] .passcode-keypad button{ background:var(--surface-2); color:var(--ink); }
+html[data-theme="dark"] .passcode-keypad button:active{ background:#2f382f; }
+html[data-theme="dark"] .config-banner{ background:var(--warn-bg); border-color:var(--warn-border); color:var(--warn-text); }
+html[data-theme="dark"] .config-banner code{ background:var(--surface-2); border-color:var(--warn-border); color:var(--warn-text); }
+html[data-theme="dark"] .name-chip{ background:var(--surface-2); }
+html[data-theme="dark"] .pref-row.is-past{ background:#181d19; border-color:var(--surface-2); }
+html[data-theme="dark"] .pref-row.is-today{ background:var(--accent-soft); }
+html[data-theme="dark"] .pref-today-dot{ background:var(--accent-soft); }
+html[data-theme="dark"] .pref-toggle{ background:var(--surface-2); }
+html[data-theme="dark"] .score-table th{ background:var(--surface-2); }
+html[data-theme="dark"] .cal-cell.duty{ background:var(--warn-bg); border-color:var(--warn-border); }
+html[data-theme="dark"] .special-date-row button{ color:#7c8579; }
+
+/* 切り替えボタン */
+.theme-toggle{
+  border:1px solid rgba(255,255,255,.18); background:rgba(255,255,255,.08); color:#fff;
+  border-radius:999px; width:30px; height:30px; flex:0 0 auto;
+  display:flex; align-items:center; justify-content:center;
+  font-size:14px; cursor:pointer; padding:0;
+}
+.theme-toggle:active{ background:rgba(255,255,255,.18); }
+  
 </style>
+<script>
+(function(){
+  var saved = localStorage.getItem('atlasTheme');
+  var theme = saved || (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+  document.documentElement.dataset.theme = theme;
+})();
+</script>
 </head>
 <body>
 
@@ -421,6 +492,7 @@
       <div class="brand-sub">Agricultural Task and Labor Administration System</div>
     </div>
     <div class="date-pill" id="datePill">–</div>
+    <button class="theme-toggle" id="themeToggle" onclick="toggleTheme()">🌙</button>
   </div>
   <div class="mode-switch" id="modeSwitch">
     <button data-mode="check" class="active">✅ 栽培管理</button>
@@ -596,6 +668,18 @@ function loadPdfLibs(){
 }
 </script>
 <script>
+  function applyThemeIcon(){
+  var btn = document.getElementById('themeToggle');
+  if(!btn) return;
+  btn.textContent = document.documentElement.dataset.theme === 'dark' ? '☀️' : '🌙';
+}
+function toggleTheme(){
+  var next = document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark';
+  document.documentElement.dataset.theme = next;
+  localStorage.setItem('atlasTheme', next);
+  applyThemeIcon();
+}
+document.addEventListener('DOMContentLoaded', applyThemeIcon);
 /* =========================================================================
    Firebase 設定
    -------------------------------------------------------------------------
