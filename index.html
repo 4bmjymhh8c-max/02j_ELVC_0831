@@ -1807,9 +1807,9 @@ function renderBackupPreview(payload){
 
   listEl.innerHTML = `
     <div class="diff-legend">
-      <span><span class="diff-dot" style="background:#4caf50;"></span>追加される</span>
-      <span><span class="diff-dot" style="background:#e0b400;"></span>変更される</span>
-      <span><span class="diff-dot" style="background:#c1613f;"></span>削除される</span>
+      <span><span class="diff-dot" style="background:#4caf50;"></span>追加箇所</span>
+      <span><span class="diff-dot" style="background:#e0b400;"></span>変更箇所</span>
+      <span><span class="diff-dot" style="background:#c1613f;"></span>削除箇所</span>
     </div>
     <div class="empty-note" style="text-align:left; padding:0 2px 8px;">場所数: ${sections.length} / タスク数: ${totalTasks}</div>
     <div style="max-height:40vh; overflow-y:auto; margin-bottom:12px;">${sectionBlockHtml || `<div class="empty-note">中身が空です</div>`}</div>
