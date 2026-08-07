@@ -14,7 +14,10 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="圃場管理システム ATLAS">
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Zen+Maru+Gothic:wght@500;700;900&family=Noto+Sans+JP:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Zen+Maru+Gothic:wght@500;700;900&family=Noto+Sans+JP:wght@400;500;600;700&display=swap">
+<link href="https://fonts.googleapis.com/css2?family=Zen+Maru+Gothic:wght@500;700;900&family=Noto+Sans+JP:wght@400;500;600;700&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
+<noscript><link href="https://fonts.googleapis.com/css2?family=Zen+Maru+Gothic:wght@500;700;900&family=Noto+Sans+JP:wght@400;500;600;700&display=swap" rel="stylesheet"></noscript>
 <link rel="preconnect" href="https://www.gstatic.com" crossorigin>
 <link rel="preconnect" href="https://firestore.googleapis.com" crossorigin>
 <style>
@@ -33,7 +36,7 @@
     --done:#4c7a52;
     --alert:#c1613f;
   }
-  *{box-sizing:border-box; -webkit-tap-highlight-color: transparent;}
+  *{box-sizing:border-box; -webkit-tap-highlight-color: transparent; transition:background-color .35s ease, color .35s ease, border-color .35s ease, box-shadow .35s ease;}
   html,body{margin:0;padding:0;}
   html{ height:100%; background:var(--sand-100); }
   body{
@@ -181,7 +184,7 @@
   .icon-btn{width:34px; height:34px; border:none; background:none; display:flex; align-items:center; justify-content:center; color:#b9ab98; cursor:pointer; border-radius:8px; flex:0 0 auto;}
   .icon-btn:active{background:#f1ece0;}
   .icon-btn svg{width:16px; height:16px;}
-  .chev{width:18px; height:18px; transition:transform .2s ease; color:var(--leaf-500); flex:0 0 auto;}
+  .chev{width:18px; height:18px; transition:transform .2s ease, color .35s ease; color:var(--leaf-500); flex:0 0 auto;}
   .section-card.open .chev{transform:rotate(90deg);}
   .section-card.all-done{background:#f2f8f0; border-color:#cfe4c9;}
   .section-card.all-done .section-title{color:var(--leaf-600);}
@@ -505,12 +508,14 @@ html[data-theme="dark"] .cal-dow{ color:#c3cdc0; }
 
 <header class="top">
   <div class="brand-row">
-    <div class="brand">圃場管理システム ATLAS
-      <div class="brand-sub">Agricultural Task<br>and Labor Administration System</div>
-    </div>
+  <div class="brand">圃場管理システム ATLAS
+    <div class="brand-sub">Agricultural Task<br>and Labor Administration System</div>
+  </div>
+  <div style="display:flex; align-items:center; gap:8px; flex:0 0 auto;">
     <div class="date-pill" id="datePill">–</div>
     <button class="theme-toggle" id="themeToggle" onclick="toggleTheme()">🌙</button>
   </div>
+</div>
   <div class="mode-switch" id="modeSwitch">
     <button data-mode="check" class="active">✅ 栽培管理</button>
     <button data-mode="duty">📅 当番管理</button>
