@@ -35,7 +35,7 @@
   }
   *{box-sizing:border-box; -webkit-tap-highlight-color: transparent;}
   html,body{margin:0;padding:0;}
-  html{ height:100%; }
+  html{ height:100%; background:var(--sand-100); }
   body{
     background:var(--sand-100);
     color:var(--ink);
@@ -451,6 +451,7 @@ html[data-theme="dark"] .modal-sheet{ background:#1c211d; }
 html[data-theme="dark"] .backup-pager button:disabled{ background:var(--surface-2); }
 html[data-theme="dark"] .modal-close{ background:var(--surface-2); }
 html[data-theme="dark"] .passcode-dots .dot{ background:var(--surface-2); }
+html[data-theme="dark"] .passcode-dots .dot.filled{ background:var(--leaf-600); border-color:var(--leaf-600); }
 html[data-theme="dark"] .passcode-keypad button{ background:var(--surface-2); color:var(--ink); }
 html[data-theme="dark"] .passcode-keypad button:active{ background:#2f382f; }
 html[data-theme="dark"] .config-banner{ background:var(--warn-bg); border-color:var(--warn-border); color:var(--warn-text); }
@@ -491,6 +492,7 @@ html[data-theme="dark"] .cal-dow{ color:#c3cdc0; }
   var saved = localStorage.getItem('atlasTheme');
   var theme = saved || (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
   document.documentElement.dataset.theme = theme;
+  document.documentElement.style.background = theme === 'dark' ? '#14181a' : '#f2efe4';
 })();
 </script>
 </head>
@@ -504,7 +506,7 @@ html[data-theme="dark"] .cal-dow{ color:#c3cdc0; }
 <header class="top">
   <div class="brand-row">
     <div class="brand">圃場管理システム ATLAS
-      <div class="brand-sub">Agricultural Task and Labor Administration System</div>
+      <div class="brand-sub">Agricultural Task<br>and Labor Administration System</div>
     </div>
     <div class="date-pill" id="datePill">–</div>
     <button class="theme-toggle" id="themeToggle" onclick="toggleTheme()">🌙</button>
