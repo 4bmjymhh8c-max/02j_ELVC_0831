@@ -370,16 +370,19 @@
   .score-table tr:last-child td{ border-bottom:none; }
 
   .cal-month-title{ font-family:"Zen Maru Gothic",sans-serif; font-weight:800; color:var(--soil-800); font-size:15px; margin:14px 0 8px; }
-  .cal-grid{ display:grid; grid-template-columns:repeat(7,1fr); gap:5px; }
+  .cal-grid{ display:grid; grid-template-columns:repeat(7,1fr); gap:5px; max-width:420px; margin:0 auto; }
   .cal-dow{ text-align:center; font-size:10.5px; color:var(--ink-soft); font-weight:700; padding-bottom:2px; }
   .cal-cell{
     aspect-ratio:1/1; border-radius:10px; border:1px solid var(--line); background:var(--card);
-    display:flex; flex-direction:column; align-items:center; justify-content:flex-start; padding:4px 2px;
+    display:flex; flex-direction:column; align-items:center; justify-content:center; padding:4px 2px;
+
     cursor:pointer; overflow:hidden; min-height:52px;
   }
   .cal-cell.empty{ background:transparent; border:none; cursor:default; }
   .cal-cell.duty{ background:#fdf3e6; border-color:#eccf9d; }
   .cal-cell.past{ opacity:.55; }
+  .cal-cell.today{ border:2px solid var(--leaf-600); box-shadow:0 0 0 1px var(--leaf-600) inset; background:var(--leaf-100); }
+  .cal-cell.today .cal-num{ color:var(--leaf-600); }
   .cal-cell .cal-num{ font-family:"Zen Maru Gothic",sans-serif; font-weight:800; font-size:12.5px; color:var(--soil-800); }
   .cal-cell.duty .cal-num{ color:var(--alert); }
   .cal-cell .cal-label{ font-size:8px; color:var(--bark); line-height:1.1; margin-top:1px; text-align:center; }
@@ -460,6 +463,18 @@ html[data-theme="dark"] .pref-toggle{ background:var(--surface-2); }
 html[data-theme="dark"] .score-table th{ background:var(--surface-2); }
 html[data-theme="dark"] .cal-cell.duty{ background:var(--warn-bg); border-color:var(--warn-border); }
 html[data-theme="dark"] .special-date-row button{ color:#7c8579; }
+.diff-added{ background:#e3f7d8; border-left:4px solid #4caf50; padding:6px 8px; border-radius:6px; margin-bottom:6px; }
+.diff-changed{ background:#fff6cc; border-left:4px solid #e0b400; padding:6px 8px; border-radius:6px; margin-bottom:6px; }
+.diff-removed{ background:#fde3e0; border-left:4px solid #c1613f; padding:6px 8px; border-radius:6px; margin-bottom:6px; text-decoration:line-through; opacity:.85; }
+.diff-legend{ display:flex; gap:12px; flex-wrap:wrap; font-size:11px; color:var(--ink-soft); margin-bottom:10px; }
+.diff-legend span{ display:inline-flex; align-items:center; gap:4px; }
+.diff-dot{ width:9px; height:9px; border-radius:3px; display:inline-block; }
+html[data-theme="dark"] .diff-added{ background:#1f3a22; border-left-color:#5fae66; }
+html[data-theme="dark"] .diff-changed{ background:#3a3314; border-left-color:#e0b400; }
+html[data-theme="dark"] .diff-removed{ background:#3a221e; border-left-color:#e08066; }
+html[data-theme="dark"] .cal-cell{ border-color:#3a4a3e; }
+html[data-theme="dark"] .cal-cell.past{ opacity:.75; }
+html[data-theme="dark"] .cal-dow{ color:#c3cdc0; }
 
 /* 切り替えボタン */
 .theme-toggle{
@@ -934,6 +949,33 @@ function withIds(rawSections){
     assignee: s.assignee||"",
     tasks: s.tasks.map(t=>({ id: genId("t"), text: t, assignee:"" }))
   }));
+}
+
+function diffStructures(current, backup){
+  const curById={}; (current||[]).forEach(s=>curById[s.id]=s);
+  const bkById={}; (backup||[]).forEach(s=>bkById[s.id]=s);
+  const orderedIds=[]; const seen=new Set();
+  (backup||[]).forEach(s=>{ if(!seen.has(s.id)){ orderedIds.push(s.id); seen.add(s.id); } });
+  (current||[]).forEach(s=>{ if(!seen.has(s.id)){ orderedIds.push(s.id); seen.add(s.id); } });
+  return orderedIds.map(id=>{
+    const b=bkById[id], c=curById[id];
+    if(b && !c) return { status:"added", name:b.name, assignee:b.assignee, taskDiffs:b.tasks.map(t=>({status:"added",text:t.text,assignee:t.assignee})) };
+    if(!b && c) return { status:"removed", name:c.name, assignee:c.assignee, taskDiffs:c.tasks.map(t=>({status:"removed",text:t.text,assignee:t.assignee})) };
+    const sectionChanged = b.name!==c.name || (b.assignee||"")!==(c.assignee||"");
+    const curTaskById={}; c.tasks.forEach(t=>curTaskById[t.id]=t);
+    const bkTaskById={}; b.tasks.forEach(t=>bkTaskById[t.id]=t);
+    const taskIds=[]; const seenT=new Set();
+    b.tasks.forEach(t=>{ if(!seenT.has(t.id)){ taskIds.push(t.id); seenT.add(t.id);} });
+    c.tasks.forEach(t=>{ if(!seenT.has(t.id)){ taskIds.push(t.id); seenT.add(t.id);} });
+    const taskDiffs = taskIds.map(tid=>{
+      const bt=bkTaskById[tid], ct=curTaskById[tid];
+      if(bt && !ct) return { status:"added", text:bt.text, assignee:bt.assignee };
+      if(!bt && ct) return { status:"removed", text:ct.text, assignee:ct.assignee };
+      const changed = bt.text!==ct.text || (bt.assignee||"")!==(ct.assignee||"");
+      return { status:changed?"changed":"same", text:bt.text, assignee:bt.assignee };
+    });
+    return { status:sectionChanged?"changed":"same", name:b.name, assignee:b.assignee, taskDiffs };
+  });
 }
 
 /* ---------- state ---------- */
@@ -1748,17 +1790,29 @@ function renderBackupPreview(payload){
   const listEl=document.getElementById("backupList");
   const sections = payload.structure || [];
   const totalTasks = sections.reduce((sum,s)=>sum+s.tasks.length,0);
-  const previewHtml = sections.map(s=>`
-    <div style="margin-bottom:10px;">
-      <div style="font-weight:700; color:var(--soil-800);">${escapeHtml(s.name)}${s.assignee?` <span style="font-weight:500; color:var(--bark); font-size:11.5px;">(担当: ${escapeHtml(s.assignee)})</span>`:``}</div>
-      <div style="font-size:12px; color:var(--ink-soft); line-height:1.6;">
-        ${s.tasks.length ? s.tasks.map(t=>`・${escapeHtml(t.text)}`).join("<br>") : "(タスクなし)"}
-      </div>
-    </div>
-  `).join("");
+  const diffs = diffStructures(structures[currentTab] || [], sections);
+
+  const sectionBlockHtml = diffs.map(d=>{
+    const wrapClass = d.status==="added" ? "diff-added" : d.status==="removed" ? "diff-removed" : d.status==="changed" ? "diff-changed" : "";
+    const nameLine = `${escapeHtml(d.name)}${d.assignee?` <span style="font-weight:500; font-size:11.5px;">(担当: ${escapeHtml(d.assignee)})</span>`:``}`;
+    const taskLines = d.taskDiffs.length ? d.taskDiffs.map(td=>{
+      const tClass = td.status==="added" ? "diff-added" : td.status==="removed" ? "diff-removed" : td.status==="changed" ? "diff-changed" : "";
+      return `<div class="${tClass}" style="font-size:12px; ${tClass?"":"color:var(--ink-soft);"}">・${escapeHtml(td.text)}${td.assignee?`(担当:${escapeHtml(td.assignee)})`:""}</div>`;
+    }).join("") : `<div style="font-size:12px; color:var(--ink-soft);">(タスクなし)</div>`;
+    return `<div class="${wrapClass}" style="margin-bottom:8px; ${wrapClass?"":"padding:4px 0;"}">
+      <div style="font-weight:700; color:var(--soil-800);">${nameLine}</div>
+      <div style="margin-top:4px;">${taskLines}</div>
+    </div>`;
+  }).join("");
+
   listEl.innerHTML = `
-    <div class="empty-note" style="text-align:left; padding:4px 2px 12px;">場所数: ${sections.length} / タスク数: ${totalTasks}</div>
-    <div style="max-height:40vh; overflow-y:auto; margin-bottom:12px;">${previewHtml || `<div class="empty-note">中身が空です</div>`}</div>
+    <div class="diff-legend">
+      <span><span class="diff-dot" style="background:#4caf50;"></span>追加される</span>
+      <span><span class="diff-dot" style="background:#e0b400;"></span>変更される</span>
+      <span><span class="diff-dot" style="background:#c1613f;"></span>削除される</span>
+    </div>
+    <div class="empty-note" style="text-align:left; padding:0 2px 8px;">場所数: ${sections.length} / タスク数: ${totalTasks}</div>
+    <div style="max-height:40vh; overflow-y:auto; margin-bottom:12px;">${sectionBlockHtml || `<div class="empty-note">中身が空です</div>`}</div>
     <div style="display:flex; gap:8px;">
       <button id="backupPreviewBack" style="flex:1; border:none; background:#efece2; color:var(--ink-soft); border-radius:10px; padding:11px; font-weight:600; cursor:pointer;">一覧に戻る</button>
       <button id="backupPreviewRestore" style="flex:1; border:none; background:var(--leaf-600); color:#fff; border-radius:10px; padding:11px; font-weight:600; cursor:pointer;">この内容で復元する</button>
@@ -2856,7 +2910,7 @@ async function renderCalendarPanel(el){
       const d = new Date(ds+"T00:00:00");
       const duty = isDutyDate(ds);
       const people = calendarAssign[ds] || [];
-              html += `<div class="cal-cell ${duty?"duty":""}${ds<todayStr?" past":""}" data-cal-date="${ds}">
+              html += `<div class="cal-cell ${duty?"duty":""}${ds<todayStr?" past":""}${ds===todayStr?" today":""}" data-cal-date="${ds}">
         <div class="cal-num">${d.getDate()}</div>
         ${duty ? `<div class="cal-label">${escapeHtml(labelForDate(ds))}</div>` : ``}
         ${people.length ? `<div class="cal-people">${escapeHtml(people.join("・"))}</div>` : ``}
