@@ -1,8 +1,18 @@
 <!DOCTYPE html>
-<html lang="ja">
+<html lang="ja" style="background:#f2efe4">
 <head>
 <meta charset="UTF-8">
-<meta name="color-scheme" content="light dark">
+<script>
+/* テーマ判定はできる限り早く実行し、OS標準のcolor-scheme先読み描画との
+   ズレ(=起動時のチラつき/白画面)が起きる前に正しい背景色を確定させる。
+   意図的に <style> やフォント読み込みより前、head の先頭に置いている。 */
+(function(){
+  var saved = localStorage.getItem('atlasTheme');
+  var theme = saved || (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+  document.documentElement.dataset.theme = theme;
+  document.documentElement.style.background = theme === 'dark' ? '#14181a' : '#f2efe4';
+})();
+</script>
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, viewport-fit=cover">
 <title>圃場管理システム ATLAS</title>
 <meta name="robots" content="noindex, nofollow">
@@ -23,6 +33,7 @@
 <link rel="preconnect" href="https://firestore.googleapis.com" crossorigin>
 <style>
   :root{
+    color-scheme: light;
     --soil-900:#26402f;
     --soil-800:#2f4d38;
     --leaf-600:#4c7a52;
@@ -426,6 +437,7 @@
 }
   /* ================= ダークモード ================= */
 html[data-theme="dark"]{
+  color-scheme: dark;
   --soil-900:#1b2e21;
   --soil-800:#d9e6d4;
   --leaf-600:#6fae78;
@@ -504,14 +516,6 @@ html[data-theme="dark"] .cal-dow{ color:#c3cdc0; }
 html[data-theme="dark"] .theme-toggle::before{ content:"☀️"; }
   
 </style>
-<script>
-(function(){
-  var saved = localStorage.getItem('atlasTheme');
-  var theme = saved || (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
-  document.documentElement.dataset.theme = theme;
-  document.documentElement.style.background = theme === 'dark' ? '#14181a' : '#f2efe4';
-})();
-</script>
 </head>
 <body>
 
@@ -3138,5 +3142,15 @@ document.getElementById("dutySubNav").addEventListener("click", async (e)=>{
     }, remaining);
   }
 })();
+
+/* ホーム画面アプリとして開いた時、次回起動以降はネットワークを待たずに
+   このHTML自体をキャッシュから即表示し、起動時の白画面/待ち時間を短縮する。
+   index.htmlを更新したら、sw.js側のCACHE_NAMEの数字も必ず上げること
+   (上げないと端末に古いキャッシュが残り続けてしまう)。 */
+if('serviceWorker' in navigator){
+  window.addEventListener('load', ()=>{
+    navigator.serviceWorker.register('./sw.js').catch(()=>{ /* 対応外環境などは無視 */ });
+  });
+}
 </script>
 </html>
