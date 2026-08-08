@@ -374,6 +374,10 @@
   .pref-month-tag{ font-size:10.5px; font-weight:700; border-radius:999px; padding:3px 9px; white-space:nowrap; }
   .pref-month-tag.next{ background:var(--leaf-600); color:#fff; }
   .pref-month-tag.this{ background:var(--leaf-100); color:var(--ink-soft); }
+  .pref-status-badge{ font-size:10.5px; font-weight:700; border-radius:999px; padding:3px 9px; white-space:nowrap; }
+  .pref-status-badge.open{ background:#dff0dc; color:var(--leaf-600); }
+  .pref-status-badge.closed{ background:#efece2; color:var(--ink-soft); }
+  .pref-deadline-line{ font-size:11px; color:var(--bark); margin:-3px 0 6px; font-weight:600; }
   .pref-month-sub{ font-size:11px; color:var(--ink-soft); margin-top:1px; }
   .pref-row{ display:flex; align-items:center; gap:10px; background:var(--card); border:1px solid var(--line); border-radius:14px; padding:11px 13px; margin-bottom:9px; }
   .pref-row.is-past{ background:#f2f0e6; border-color:#e6e1d0; opacity:.68; }
@@ -488,6 +492,8 @@ html[data-theme="dark"] .pref-row.is-past{ background:#181d19; border-color:var(
 html[data-theme="dark"] .pref-row.is-today{ background:var(--accent-soft); }
 html[data-theme="dark"] .pref-today-dot{ background:var(--accent-soft); }
 html[data-theme="dark"] .pref-toggle{ background:var(--surface-2); }
+html[data-theme="dark"] .pref-status-badge.open{ background:var(--accent-soft); }
+html[data-theme="dark"] .pref-status-badge.closed{ background:var(--surface-2); }
 html[data-theme="dark"] .pref-priority{ background:var(--surface-2); }
 html[data-theme="dark"] .score-table th{ background:var(--surface-2); }
 html[data-theme="dark"] .cal-cell.duty{ background:var(--warn-bg); border-color:var(--warn-border); }
@@ -2532,6 +2538,43 @@ function labelForDate(dateStr){
   return "";
 }
 
+/* ---- 希望表の入力締切 ---- */
+let prefDeadline = null; // { date:"YYYY-MM-DD", time:"HH:MM"|null } | null(未設定=常に受付中)
+function prefDeadlineRef(){ return db.collection("duty_settings").doc("prefDeadline"); }
+async function loadPrefDeadline(){
+  try{
+    const snap = await prefDeadlineRef().get();
+    const loaded = (snap.exists && snap.data() && snap.data().date) ? { date: snap.data().date, time: snap.data().time || null } : null;
+    if(loaded && new Date(loaded.date + "T" + (loaded.time || "23:59") + ":00") <= new Date()){
+      // 締切を過ぎているものは自動解除(次に管理者が設定するまで常に受付中に戻す)
+      try{ await prefDeadlineRef().delete(); }catch(e){}
+      prefDeadline = null;
+    }else{
+      prefDeadline = loaded;
+    }
+  }catch(e){ /* オフライン時は既存キャッシュのまま */ }
+}
+async function savePrefDeadline(deadline){
+  try{
+    if(deadline) await prefDeadlineRef().set({ date: deadline.date, time: deadline.time || null });
+    else await prefDeadlineRef().delete();
+    prefDeadline = deadline;
+  }catch(e){ showToast("締切の保存に失敗しました"); }
+}
+function prefDeadlineDateObj(){
+  if(!prefDeadline) return null;
+  return new Date(prefDeadline.date + "T" + (prefDeadline.time || "23:59") + ":00");
+}
+function isPrefOpen(){
+  const dl = prefDeadlineDateObj();
+  return !dl || new Date() < dl; // 締切未設定なら常に受付中
+}
+function prefDeadlineLabel(){
+  if(!prefDeadline) return "";
+  const d = new Date(prefDeadline.date+"T00:00:00");
+  return `${d.getMonth()+1}/${d.getDate()} ${prefDeadline.time || "23:59"}`;
+}
+
 /* ---- 希望表 ---- */
 let preferences = {}; // { "YYYY-MM-DD": {name:true,...} } 対応可能な人
 let priorities = {};  // { "YYYY-MM-DD": {name:true,...} } 特に希望している人(対応可能な人のみ設定できる)
@@ -2554,25 +2597,28 @@ async function togglePreference(dateStr){
   if(wasMine) delete next[myName]; else next[myName]=true;
   preferences[dateStr]=next;
 
-  const patch = { wants: { [myName]: wasMine ? firebase.firestore.FieldValue.delete() : true } };
+  const patch = {};
+  patch["wants."+myName] = wasMine ? firebase.firestore.FieldValue.delete() : true;
 
+  // 対応不可に戻す場合は、優先希望も一緒に外す(対応可能な日にしか優先は付けられないため)
   const currentPriority = priorities[dateStr] || {};
   if(wasMine && currentPriority[myName]){
     const nextPriority = Object.assign({}, currentPriority);
     delete nextPriority[myName];
     priorities[dateStr] = nextPriority;
-    patch.priority = { [myName]: firebase.firestore.FieldValue.delete() };
+    patch["priority."+myName] = firebase.firestore.FieldValue.delete();
   }
 
   try{
+    // { merge:true } のみだとキーの削除(delete)が反映されず古い値が残り続けるため、
+    // ドット記法のフィールドパスで対象キーだけを明示的に指定する
     await preferencesCol().doc(dateStr).set(patch, { merge: true });
   }catch(e){ showToast("保存に失敗しました"); }
   renderDutyPanel();
 }
-
 async function togglePriority(dateStr){
   if(!myName){ openNameModal(()=>togglePriority(dateStr)); return; }
-  if(!(preferences[dateStr] && preferences[dateStr][myName])) return;
+  if(!(preferences[dateStr] && preferences[dateStr][myName])) return; // 対応可能な日のみ
   const current = priorities[dateStr] || {};
   const wasOn = !!current[myName];
   const next = Object.assign({}, current);
@@ -2580,7 +2626,7 @@ async function togglePriority(dateStr){
   priorities[dateStr]=next;
   try{
     await preferencesCol().doc(dateStr).set(
-      { priority: { [myName]: wasOn ? firebase.firestore.FieldValue.delete() : true } },
+      { ["priority."+myName]: wasOn ? firebase.firestore.FieldValue.delete() : true },
       { merge: true }
     );
   }catch(e){ showToast("保存に失敗しました"); }
@@ -2742,14 +2788,29 @@ async function renderPrefPanel(el){
       <button id="changeNameBtn">${myName?"変更":"名前を選ぶ"}</button>
     </div>`;
 
-  const nextRows = nextDates.map(ds=>prefRowHtml(ds, true)).join("");
+  const prefOpen = isPrefOpen();
+  const statusBadge = prefOpen
+    ? `<span class="pref-status-badge open">受付中</span>`
+    : `<span class="pref-status-badge closed">受付終了</span>`;
+  const deadlineLine = prefDeadline
+    ? `<div class="pref-deadline-line">締切: ${escapeHtml(prefDeadlineLabel())}</div>`
+    : ``;
+  const nextSubMsg = prefOpen
+    ? "当番の対応可能日を入力できます。優先希望があれば、登録してください。可能な限り考慮します。"
+    : "記録用の表示です。（編集はできません）";
+
+  const nextRows = nextDates.map(ds=>prefRowHtml(ds, prefOpen)).join("");
   const nextBlock = `
   <div class="pref-month-block">
     <div class="pref-month-head">
-      <div class="name">${nextM.year}年${nextM.month+1}月 <span class="pref-month-tag next">来月・希望日入力</span></div>
-      <button class="lock-btn" id="prefAllBtn">✅ 全日可能</button>
+      <div class="name">${nextM.year}年${nextM.month+1}月 <span class="pref-month-tag next">来月・希望日入力</span> ${statusBadge}</div>
+      <span class="duty-actions">
+        ${(prefOpen) ? `<button class="lock-btn" id="prefAllBtn">✅ 全日可能</button>` : ``}
+        ${isAdmin ? `<button class="lock-btn" id="prefDeadlineBtn">🔒 締切設定</button>` : ``}
+      </span>
     </div>
-    <div class="pref-month-sub">当番の対応可能日を入力できます。優先希望があれば、登録してください。可能な限り考慮します。</div>
+    ${deadlineLine}
+    <div class="pref-month-sub">${nextSubMsg}</div>
     ${nextRows || `<div class="empty-note">対象の日がありません</div>`}
   </div>`;
 
@@ -2765,9 +2826,10 @@ async function renderPrefPanel(el){
 
   el.innerHTML = meBar + `<div class="duty-section-title">休日管理 希望表</div>` + nextBlock + thisBlock;
   document.getElementById("changeNameBtn").addEventListener("click", ()=>openNameModal());
-  document.getElementById("prefAllBtn").addEventListener("click", async ()=>{
+  const prefAllBtnEl = document.getElementById("prefAllBtn");
+  if(prefAllBtnEl) prefAllBtnEl.addEventListener("click", async ()=>{
   if(!myName){ openNameModal(()=>renderPrefPanel(el)); return; }
-  if(!confirm(`${nextM.year}年${nextM.month+1}全日を対応可能にします。よろしいですか？`)) return;
+  if(!confirm(`${nextM.year}年${nextM.month+1}月の当番が必要な日、全日を対応可能にします。よろしいですか？`)) return;
   try{
     await Promise.all(nextDates.map(async ds=>{
       const current = preferences[ds] || {};
@@ -2786,6 +2848,46 @@ async function renderPrefPanel(el){
   });
   el.querySelectorAll("[data-priority-date]").forEach(btn=>{
     btn.addEventListener("click", ()=>togglePriority(btn.getAttribute("data-priority-date")));
+  });
+  const prefDeadlineBtnEl = document.getElementById("prefDeadlineBtn");
+  if(prefDeadlineBtnEl) prefDeadlineBtnEl.addEventListener("click", async ()=>{
+    if(!unlockAdmin()) return;
+    const dateVal = prompt(
+      "締切の日付を「年-月-日」の形式で入力してください(例: 2026-3-25)\n空欄でOKすると締切を解除します",
+      prefDeadline ? prefDeadline.date : ""
+    );
+    if(dateVal===null) return;
+    const trimmed = dateVal.trim();
+    if(!trimmed){
+      await savePrefDeadline(null);
+      showToast("締切を解除しました");
+      renderPrefPanel(el);
+      return;
+    }
+    const parts = trimmed.split("-").map(s=>parseInt(String(s).trim(),10));
+    const y=parts[0], m=parts[1], dd=parts[2];
+    if(isNaN(y)||isNaN(m)||isNaN(dd)||m<1||m>12||dd<1||dd>31){
+      showToast("「年-月-日」の形式で入力してください(例: 2026-3-25)"); return;
+    }
+    const dateStr = `${y}-${pad2(m)}-${pad2(dd)}`;
+    const timeVal = prompt(
+      "締切の時刻を「時:分」の24時間表記で入力してください(例: 18:00)\n空欄でOKすると23:59になります",
+      prefDeadline && prefDeadline.time ? prefDeadline.time : ""
+    );
+    if(timeVal===null) return;
+    let timeStr = null;
+    const timeTrimmed = timeVal.trim();
+    if(timeTrimmed){
+      const tparts = timeTrimmed.split(":").map(s=>parseInt(String(s).trim(),10));
+      const hh=tparts[0], mm=tparts[1];
+      if(isNaN(hh)||isNaN(mm)||hh<0||hh>23||mm<0||mm>59){
+        showToast("「時:分」の形式で入力してください(例: 18:00)"); return;
+      }
+      timeStr = pad2(hh)+":"+pad2(mm);
+    }
+    await savePrefDeadline({ date: dateStr, time: timeStr });
+    showToast("締切を設定しました");
+    renderPrefPanel(el);
   });
 }
 
@@ -2841,7 +2943,7 @@ async function renderScorePanel(el){
       <thead><tr><th>名前</th><th>回数</th><th>スコア</th></tr></thead>
       <tbody>${rowsHtml || `<tr><td colspan="3" class="empty-note">この期間の当番記録がありません</td></tr>`}</tbody>
     </table>
-    <div class="empty-note">回数集計は${currentPeriod ? periodLabelFor(currentPeriod) : "選択した"}の期間での記録です。</div>
+    <div class="empty-note">基本は1日1ポイント、お盆や年末年始などはポイントアップします。集計は${currentPeriod ? periodLabelFor(currentPeriod) : "選択した"}の期間で記録されます</div>
   `;
   document.getElementById("adminLockBtn").addEventListener("click", ()=>{
     if(isAdmin) lockAdmin(); else unlockAdmin();
@@ -3171,7 +3273,7 @@ document.getElementById("dutySubNav").addEventListener("click", async (e)=>{
     setupConnectionBanner();
     // loadFiscalPresetsはloadFiscalSettingsの結果(移行処理)に依存するため、
     // それ以外の読み込みと一緒に並列化して待ち時間を短縮する
-    await Promise.all([loadRoster(), loadSpecialDates(), loadAdminPassword(), loadRestorePasscode(), loadFiscalSettings()]);
+    await Promise.all([loadRoster(), loadSpecialDates(), loadAdminPassword(), loadRestorePasscode(), loadFiscalSettings(), loadPrefDeadline()]);
     await loadFiscalPresets();
     await loadTab(currentTab);
     render();
