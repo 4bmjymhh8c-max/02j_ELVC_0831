@@ -3,14 +3,11 @@
 <head>
 <meta charset="UTF-8">
 <script>
-/* テーマ判定はできる限り早く実行し、OS標準のcolor-scheme先読み描画との
-   ズレ(=起動時のチラつき/白画面)が起きる前に正しい背景色を確定させる。
-   意図的に <style> やフォント読み込みより前、head の先頭に置いている。 */
+/* 起動時は常にlight固定。splash(manifestのbackground_color)と初期描画色を
+   一致させることで起動時の色チラつきを防ぐ。ダークにしたい場合は起動後に
+   手動トグルで都度切り替える方式とし、OS判定・保存は行わない。 */
 (function(){
-  var saved = localStorage.getItem('atlasTheme');
-  var theme = saved || (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
-  document.documentElement.dataset.theme = theme;
-  document.documentElement.style.background = theme === 'dark' ? '#14181a' : '#f2efe4';
+  document.documentElement.dataset.theme = 'light';
 })();
 </script>
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, viewport-fit=cover">
@@ -20,8 +17,7 @@
 <link rel="shortcut icon" href="icons/favicon-32.png">
 <link rel="apple-touch-icon" href="icons/apple-touch-icon-180.png">
 <link rel="manifest" href="icons/manifest.webmanifest">
-<link rel="apple-touch-startup-image" media="(prefers-color-scheme: light)" href="icons/splash-light.png">
-<link rel="apple-touch-startup-image" media="(prefers-color-scheme: dark)" href="icons/splash-dark.png">
+<link rel="apple-touch-startup-image" href="icons/splash-light.png">
 <meta name="theme-color" content="#26402f">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -720,7 +716,6 @@ function loadPdfLibs(){
   if(!curtain){
     // 万一カーテン要素が無い場合は従来通り即切り替え
     document.documentElement.dataset.theme = next;
-    localStorage.setItem('atlasTheme', next);
     return;
   }
   // 1) 切り替え後の背景色でカーテンを画面全体にフェードイン（覆い隠す）
@@ -729,7 +724,6 @@ function loadPdfLibs(){
   // 2) カーテンが覆い切ったタイミングで、実際のテーマを裏側で切り替える
   window.setTimeout(function(){
     document.documentElement.dataset.theme = next;
-    localStorage.setItem('atlasTheme', next);
     // 3) 切り替え済みの画面をカーテンごしにフェードアウトさせて見せる
     requestAnimationFrame(function(){
       curtain.style.opacity = '0';
