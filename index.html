@@ -37,7 +37,18 @@
     --done:#4c7a52;
     --alert:#c1613f;
   }
-  *{box-sizing:border-box; -webkit-tap-highlight-color: transparent; transition:background-color .35s ease, color .35s ease, border-color .35s ease, box-shadow .35s ease;}
+  *{box-sizing:border-box; -webkit-tap-highlight-color: transparent;}
+
+  /* ダークモード切り替え演出用の"カーテン"。
+     全要素を個別にアニメーションさせる代わりに、この1枚だけをフェードさせて
+     色の切り替わりを覆い隠す（iPhoneでのコマ落ち対策）。 */
+  .theme-curtain{
+    position:fixed; inset:0; z-index:99999;
+    background:#f2efe4;
+    opacity:0;
+    pointer-events:none;
+    transition:opacity .25s ease;
+  }
   html,body{margin:0;padding:0;}
   html{ height:100%; background:var(--sand-100); }
   body{
@@ -502,6 +513,8 @@ html[data-theme="dark"] .cal-dow{ color:#c3cdc0; }
 </head>
 <body>
 
+<div id="themeCurtain" class="theme-curtain"></div>
+
 <div class="app-loading-overlay" id="appLoadingOverlay">
   <div class="app-loading-spinner"></div>
   <div class="app-loading-text">読み込み中…</div>
@@ -698,9 +711,27 @@ function loadPdfLibs(){
 }
 function toggleTheme(){
   var next = document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark';
-  document.documentElement.dataset.theme = next;
-  localStorage.setItem('atlasTheme', next);
-  applyThemeIcon();
+  var curtain = document.getElementById('themeCurtain');
+  if(!curtain){
+    // 万一カーテン要素が無い場合は従来通り即切り替え
+    document.documentElement.dataset.theme = next;
+    localStorage.setItem('atlasTheme', next);
+    applyThemeIcon();
+    return;
+  }
+  // 1) 切り替え後の背景色でカーテンを画面全体にフェードイン（覆い隠す）
+  curtain.style.background = (next === 'dark') ? '#14181a' : '#f2efe4';
+  curtain.style.opacity = '1';
+  // 2) カーテンが覆い切ったタイミングで、実際のテーマを裏側で切り替える
+  window.setTimeout(function(){
+    document.documentElement.dataset.theme = next;
+    localStorage.setItem('atlasTheme', next);
+    applyThemeIcon();
+    // 3) 切り替え済みの画面をカーテンごしにフェードアウトさせて見せる
+    requestAnimationFrame(function(){
+      curtain.style.opacity = '0';
+    });
+  }, 260);
 }
 document.addEventListener('DOMContentLoaded', applyThemeIcon);
 /* =========================================================================
