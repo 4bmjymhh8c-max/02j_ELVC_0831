@@ -386,6 +386,8 @@
   .pref-wanters{ flex:1; min-width:0; font-size:12px; color:var(--ink-soft); line-height:1.5; }
   .pref-toggle{ flex:0 0 auto; border:1px solid var(--leaf-500); background:#fff; color:var(--leaf-600); border-radius:999px; padding:8px 12px; font-size:12px; font-weight:700; cursor:pointer; white-space:nowrap; }
   .pref-toggle.mine{ background:var(--leaf-600); color:#fff; }
+  .pref-priority{ flex:0 0 auto; border:1px solid var(--bark); background:#fff; color:var(--bark); border-radius:999px; padding:8px 10px; font-size:12px; font-weight:700; cursor:pointer; white-space:nowrap; }
+  .pref-priority.on{ background:var(--bark); color:#fff; }
   .pref-readonly-mark{ flex:0 0 auto; font-size:11px; color:var(--ink-soft); white-space:nowrap; }
 
   .score-table{ width:100%; border-collapse:collapse; background:var(--card); border:1px solid var(--line); border-radius:14px; overflow:hidden; }
@@ -486,6 +488,7 @@ html[data-theme="dark"] .pref-row.is-past{ background:#181d19; border-color:var(
 html[data-theme="dark"] .pref-row.is-today{ background:var(--accent-soft); }
 html[data-theme="dark"] .pref-today-dot{ background:var(--accent-soft); }
 html[data-theme="dark"] .pref-toggle{ background:var(--surface-2); }
+html[data-theme="dark"] .pref-priority{ background:var(--surface-2); }
 html[data-theme="dark"] .score-table th{ background:var(--surface-2); }
 html[data-theme="dark"] .cal-cell.duty{ background:var(--warn-bg); border-color:var(--warn-border); }
 html[data-theme="dark"] .special-date-row button{ color:#7c8579; }
@@ -2530,13 +2533,16 @@ function labelForDate(dateStr){
 }
 
 /* ---- 希望表 ---- */
-let preferences = {}; // { "YYYY-MM-DD": {name:true,...} }
+let preferences = {}; // { "YYYY-MM-DD": {name:true,...} } 対応可能な人
+let priorities = {};  // { "YYYY-MM-DD": {name:true,...} } 特に希望している人(対応可能な人のみ設定できる)
 function preferencesCol(){ return db.collection("preferences"); }
 async function loadPreferencesRange(dateStrs){
   try{
     const results = await Promise.all(dateStrs.map(ds=>preferencesCol().doc(ds).get()));
     results.forEach((snap,i)=>{
-      preferences[dateStrs[i]] = (snap.exists && snap.data().wants) ? snap.data().wants : {};
+      const data = snap.exists ? snap.data() : {};
+      preferences[dateStrs[i]] = data.wants || {};
+      priorities[dateStrs[i]] = data.priority || {};
     });
   }catch(e){ /* オフライン時は既存キャッシュのまま */ }
 }
@@ -2544,10 +2550,26 @@ async function togglePreference(dateStr){
   if(!myName){ openNameModal(()=>togglePreference(dateStr)); return; }
   const current = preferences[dateStr] || {};
   const next = Object.assign({}, current);
-  if(next[myName]) delete next[myName]; else next[myName]=true;
+  const wasMine = !!next[myName];
+  if(wasMine) delete next[myName]; else next[myName]=true;
   preferences[dateStr]=next;
+  // 対応不可に戻す場合は、優先希望も一緒に外す(対応可能な日にしか優先は付けられないため)
+  const nextPriority = Object.assign({}, priorities[dateStr] || {});
+  if(wasMine && nextPriority[myName]){ delete nextPriority[myName]; priorities[dateStr]=nextPriority; }
   try{
-    await preferencesCol().doc(dateStr).set({ wants: next });
+    await preferencesCol().doc(dateStr).set({ wants: next, priority: nextPriority }, { merge: true });
+  }catch(e){ showToast("保存に失敗しました"); }
+  renderDutyPanel();
+}
+async function togglePriority(dateStr){
+  if(!myName){ openNameModal(()=>togglePriority(dateStr)); return; }
+  if(!(preferences[dateStr] && preferences[dateStr][myName])) return; // 対応可能な日のみ
+  const current = priorities[dateStr] || {};
+  const next = Object.assign({}, current);
+  if(next[myName]) delete next[myName]; else next[myName]=true;
+  priorities[dateStr]=next;
+  try{
+    await preferencesCol().doc(dateStr).set({ priority: next }, { merge: true });
   }catch(e){ showToast("保存に失敗しました"); }
   renderDutyPanel();
 }
@@ -2668,11 +2690,18 @@ function prefRowHtml(ds, editable){
   const dow = ["日","月","火","水","木","金","土"][d.getDay()];
   const label = labelForDate(ds);
   const wants = preferences[ds] || {};
+  const prio = priorities[ds] || {};
   const names = Object.keys(wants).filter(n=>wants[n]);
+  names.sort((a,b)=> (prio[b]?1:0) - (prio[a]?1:0)); // 優先希望の人を先頭に
+  const namesHtml = names.map(n=> prio[n] ? `★${escapeHtml(n)}` : escapeHtml(n)).join("・");
   const mine = myName && wants[myName];
+  const mylyPrioritized = myName && prio[myName];
   const stateClass = ds < todayStr ? "is-past" : (ds === todayStr ? "is-today" : "is-future");
+  const priorityBtn = (editable && mine)
+    ? `<button class="pref-priority ${mylyPrioritized?"on":""}" data-priority-date="${ds}" title="この日を特に希望する">${mylyPrioritized?"★ 優先中":"☆ 優先にする"}</button>`
+    : "";
   const rightHtml = editable
-    ? `<button class="pref-toggle ${mine?"mine":""}" data-pref-date="${ds}">${mine?"✓ 希望済み":"＋ 希望する"}</button>`
+    ? `<button class="pref-toggle ${mine?"mine":""}" data-pref-date="${ds}">${mine?"✓ 対応可能":"＋ 対応可能にする"}</button>${priorityBtn}`
     : `<span class="pref-readonly-mark">${ds===todayStr?"本日":(ds<todayStr?"終了":"")}</span>`;
   return `
     <div class="pref-row ${stateClass}">
@@ -2681,7 +2710,7 @@ function prefRowHtml(ds, editable){
         <div class="pref-label">${escapeHtml(label)}</div>
         ${ds===todayStr ? `<div class="pref-today-dot">今日</div>` : ``}
       </div>
-      <div class="pref-wanters">${names.length? escapeHtml(names.join("・")) : "希望者なし"}</div>
+      <div class="pref-wanters">${names.length? namesHtml : "まだいません"}</div>
       ${rightHtml}
     </div>`;
 }
@@ -2704,10 +2733,10 @@ async function renderPrefPanel(el){
   const nextBlock = `
   <div class="pref-month-block">
     <div class="pref-month-head">
-      <div class="name">${nextM.year}年${nextM.month+1}月 <span class="pref-month-tag next">来月・希望入力</span></div>
+      <div class="name">${nextM.year}年${nextM.month+1}月 <span class="pref-month-tag next">来月・可能日入力</span></div>
       <button class="lock-btn" id="prefAllBtn">✅ 全日程可能</button>
     </div>
-    <div class="pref-month-sub">当番が必要な日に希望を入力できます</div>
+    <div class="pref-month-sub">当番が必要な日に、対応できるかどうかを入力できます</div>
     ${nextRows || `<div class="empty-note">対象の日がありません</div>`}
   </div>`;
 
@@ -2725,7 +2754,7 @@ async function renderPrefPanel(el){
   document.getElementById("changeNameBtn").addEventListener("click", ()=>openNameModal());
   document.getElementById("prefAllBtn").addEventListener("click", async ()=>{
   if(!myName){ openNameModal(()=>renderPrefPanel(el)); return; }
-  if(!confirm(`${nextM.year}年${nextM.month+1}月の当番が必要な日、すべてに希望を入れます。よろしいですか？`)) return;
+  if(!confirm(`${nextM.year}年${nextM.month+1}月の当番が必要な日、すべてを対応可能にします。よろしいですか？`)) return;
   try{
     await Promise.all(nextDates.map(async ds=>{
       const current = preferences[ds] || {};
@@ -2733,7 +2762,7 @@ async function renderPrefPanel(el){
       preferences[ds] = next;
       await preferencesCol().doc(ds).set({ wants: next });
     }));
-    showToast("全日程に希望を入れました");
+    showToast("全日程を対応可能にしました");
     renderPrefPanel(el);
   }catch(e){
     showToast("保存に失敗しました");
@@ -2741,6 +2770,9 @@ async function renderPrefPanel(el){
 });
   el.querySelectorAll("[data-pref-date]").forEach(btn=>{
     btn.addEventListener("click", ()=>togglePreference(btn.getAttribute("data-pref-date")));
+  });
+  el.querySelectorAll("[data-priority-date]").forEach(btn=>{
+    btn.addEventListener("click", ()=>togglePriority(btn.getAttribute("data-priority-date")));
   });
 }
 
@@ -2977,7 +3009,7 @@ async function renderCalendarPanel(el){
 }
   async function openMonthDataModal(){
   const typeVal = prompt(
-    "表示するデータを選んでください\n1: 希望表(誰が希望しているか)\n2: 当番カレンダー(実際の割り当て)\n\n半角数字の 1 か 2 を入力してください",
+    "表示するデータを選んでください\n1: 希望表(誰が対応可能か)\n2: 当番カレンダー(実際の割り当て)\n\n半角数字の 1 か 2 を入力してください",
     "2"
   );
   if(typeVal===null) return;
@@ -3007,7 +3039,7 @@ async function renderCalendarPanel(el){
       const names = Object.keys(wants).filter(n=>wants[n]);
       return `<div class="special-date-row">
         <div class="sd-date">${d.getMonth()+1}/${d.getDate()}(${dow})</div>
-        <div class="sd-label">${escapeHtml(labelForDate(ds))}: ${names.length?escapeHtml(names.join("・")):"希望なし"}</div>
+        <div class="sd-label">${escapeHtml(labelForDate(ds))}: ${names.length?escapeHtml(names.join("・")):"対応可能な人がいません"}</div>
       </div>`;
     }).join("");
   }else{
@@ -3031,15 +3063,18 @@ async function openCalendarDayModal(ds){
   const pts = pointsForDate(ds);
   const wants = preferences[ds] || {};
   const wanterNames = Object.keys(wants).filter(n=>wants[n]);
+  const prio = priorities[ds] || {};
   const assigned = calendarAssign[ds] || [];
 
   document.getElementById("calDayTitle").textContent = `${d.getFullYear()}/${d.getMonth()+1}/${d.getDate()}(${dow})`;
   const bodyEl = document.getElementById("calDayBody");
 
     const prevAssigned = calendarPrevious[ds] || [];
+  const wanterNamesHtml = wanterNames.slice().sort((a,b)=>(prio[b]?1:0)-(prio[a]?1:0))
+    .map(n=> prio[n] ? `★${escapeHtml(n)}` : escapeHtml(n)).join("・");
   let infoHtml = `<div class="cal-day-info">
     ${duty ? `<b>${escapeHtml(label)}</b>・当番が必要な日(${pts}pt)<br>` : `通常日(当番は不要です)<br>`}
-    希望している人: ${wanterNames.length ? escapeHtml(wanterNames.join("・")) : "なし"}
+    対応可能な人: ${wanterNames.length ? wanterNamesHtml : "なし"}
     ${calendarChanged[ds] ? `<br>🔁 変更前の担当: ${prevAssigned.length ? escapeHtml(prevAssigned.join("・")) : "なし"}` : ``}
   </div>`;
 
@@ -3059,14 +3094,15 @@ async function openCalendarDayModal(ds){
       (allCal[otherDs]||[]).forEach(name=>{ counts[name]=(counts[name]||0)+1; });
     });
 
-    // この日を希望している人・すでに割り当て済みの人だけを候補にする
-    const pickList = roster.filter(n=>wanterNames.includes(n) || assigned.includes(n));
+    // この日に対応可能な人・すでに割り当て済みの人だけを候補にする。優先希望の人を先頭に並べる
+    const pickList = roster.filter(n=>wanterNames.includes(n) || assigned.includes(n))
+      .sort((a,b)=>(prio[b]?1:0)-(prio[a]?1:0));
 
     infoHtml += pickList.length ? pickList.map(n=>`
       <div class="roster-check-row">
         <input type="checkbox" id="calpick-${n}" ${assigned.includes(n)?"checked":""}>
-        <label for="calpick-${n}">${escapeHtml(n)}<span class="roster-count-circle" title="累計担当回数">${circledNumber(counts[n]||0)}</span>${wanterNames.includes(n)?" (希望あり)":""}</label>
-      </div>`).join("") : `<div class="empty-note">この日を希望している人がいません</div>`;
+        <label for="calpick-${n}">${escapeHtml(n)}<span class="roster-count-circle" title="累計担当回数">${circledNumber(counts[n]||0)}</span>${prio[n]?" ★優先希望":(wanterNames.includes(n)?" (対応可能)":"")}</label>
+      </div>`).join("") : `<div class="empty-note">この日に対応可能な人がいません</div>`;
     infoHtml += `<button id="calDaySave" style="width:100%; margin-top:12px; border:none; background:var(--leaf-600); color:#fff; border-radius:10px; padding:11px; font-weight:700; cursor:pointer;">この内容で保存</button>`;
 
     bodyEl.innerHTML = infoHtml;
