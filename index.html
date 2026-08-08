@@ -2554,15 +2554,14 @@ async function togglePreference(dateStr){
   if(wasMine) delete next[myName]; else next[myName]=true;
   preferences[dateStr]=next;
 
-  const patch = {};
-  patch["wants."+myName] = wasMine ? firebase.firestore.FieldValue.delete() : true;
+  const patch = { wants: { [myName]: wasMine ? firebase.firestore.FieldValue.delete() : true } };
 
   const currentPriority = priorities[dateStr] || {};
   if(wasMine && currentPriority[myName]){
     const nextPriority = Object.assign({}, currentPriority);
     delete nextPriority[myName];
     priorities[dateStr] = nextPriority;
-    patch["priority."+myName] = firebase.firestore.FieldValue.delete();
+    patch.priority = { [myName]: firebase.firestore.FieldValue.delete() };
   }
 
   try{
@@ -2570,6 +2569,7 @@ async function togglePreference(dateStr){
   }catch(e){ showToast("保存に失敗しました"); }
   renderDutyPanel();
 }
+
 async function togglePriority(dateStr){
   if(!myName){ openNameModal(()=>togglePriority(dateStr)); return; }
   if(!(preferences[dateStr] && preferences[dateStr][myName])) return;
@@ -2580,7 +2580,7 @@ async function togglePriority(dateStr){
   priorities[dateStr]=next;
   try{
     await preferencesCol().doc(dateStr).set(
-      { ["priority."+myName]: wasOn ? firebase.firestore.FieldValue.delete() : true },
+      { priority: { [myName]: wasOn ? firebase.firestore.FieldValue.delete() : true } },
       { merge: true }
     );
   }catch(e){ showToast("保存に失敗しました"); }
