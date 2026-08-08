@@ -799,8 +799,8 @@ async function initFirebase(){
   }
 }
 
-function showConfigBanner(){
-  const main = document.getElementById("main");
+function showConfigBanner(container){
+  const main = container || document.getElementById("main");
   const banner = document.createElement("div");
   banner.className = "config-banner";
   banner.innerHTML = `⚠️ Firebaseが未設定です。HTMLファイル内の <code>firebaseConfig</code> をご自身のプロジェクトの値に書き換えてください。設定するまでデータは保存・同期されません。`;
@@ -1379,10 +1379,13 @@ function render(){
   renderDateChips();
 
   const main = document.getElementById("main");
-  main.innerHTML = "";
+  // 画面にまだ出ていない「frag」の中に新しい中身を組み立てる。
+  // main の中身は最後の1回の入れ替えまで一切触らないので、
+  // 組み立てに時間がかかる端末でも、組み立て中に画面が一瞬空になることがない。
+  const frag = document.createDocumentFragment();
 
   if(isConfigPlaceholder()){
-    showConfigBanner();
+    showConfigBanner(frag);
   }
 
   const readOnly = isHistoryMode();
@@ -1392,7 +1395,7 @@ function render(){
     const banner = document.createElement("div");
     banner.className = "history-banner";
     banner.innerHTML = `<span>📖 ${md}(${dow}) の記録を表示中（編集はできません）</span><button id="backToTodayBtn">今日に戻る</button>`;
-    main.appendChild(banner);
+    frag.appendChild(banner);
         banner.querySelector("#backToTodayBtn").addEventListener("click", ()=>selectDate(todayStr));
   }
 
@@ -1401,7 +1404,7 @@ function render(){
     dutyBanner.className = "duty-of-day-banner";
     const dLabel = readOnly ? `${shortDowLabel(viewDate).md}(${shortDowLabel(viewDate).dow})の当番` : "今日の当番";
     dutyBanner.innerHTML = `🧑‍🌾 <b>${dLabel}:</b> ${viewDateAssignees.length ? escapeHtml(viewDateAssignees.join("・")) : "未定"}`;
-    main.appendChild(dutyBanner);
+    frag.appendChild(dutyBanner);
   }
 
   document.getElementById("undoBtn").style.display = readOnly ? "none" : "";
@@ -1483,14 +1486,14 @@ function render(){
     card.appendChild(list);
     if(section.tasks.length>0 && sectionDone===section.tasks.length) card.classList.add("all-done");
     head.querySelector("[data-count]").textContent = section.tasks.length? `${sectionDone}/${section.tasks.length}`:"";
-    main.appendChild(card);
+    frag.appendChild(card);
   });
 
   if(sections.length===0){
     const note=document.createElement("div");
     note.className="empty-note";
     note.textContent="まだ場所がありません。下の「＋ 新しい場所を追加」から作成してください";
-    main.appendChild(note);
+    frag.appendChild(note);
   }
 
   if(!readOnly && editMode){
@@ -1508,17 +1511,19 @@ function render(){
         </div>
       </div>
     `;
-    main.appendChild(addSection);
+    frag.appendChild(addSection);
 
-    document.getElementById("toggleAddSection").addEventListener("click",()=>{
-      document.getElementById("addSectionForm").classList.toggle("show");
+    // まだ main に入っていない(=document.getElementByIdでは見つからない)ので、
+    // addSection自身を起点にquerySelectorで探す
+    addSection.querySelector("#toggleAddSection").addEventListener("click",()=>{
+      addSection.querySelector("#addSectionForm").classList.toggle("show");
     });
-    document.getElementById("cancelAddSection").addEventListener("click",()=>{
-      document.getElementById("addSectionForm").classList.remove("show");
+    addSection.querySelector("#cancelAddSection").addEventListener("click",()=>{
+      addSection.querySelector("#addSectionForm").classList.remove("show");
     });
-    document.getElementById("confirmAddSection").addEventListener("click", async ()=>{
-  const nameInput=document.getElementById("newSectionName");
-  const assigneeInput=document.getElementById("newSectionAssignee");
+    addSection.querySelector("#confirmAddSection").addEventListener("click", async ()=>{
+  const nameInput=addSection.querySelector("#newSectionName");
+  const assigneeInput=addSection.querySelector("#newSectionAssignee");
   const name=nameInput.value.trim();
   if(!name){ showToast("場所の名前を入力してください"); return; }
   pushUndo(currentTab);
@@ -1533,8 +1538,8 @@ function render(){
 });
   }
 
-  // bindings
-  main.querySelectorAll("[data-id]").forEach(el=>{
+  // bindings(この時点ではまだ frag の中身。main へはこの後まとめて反映される)
+  frag.querySelectorAll("[data-id]").forEach(el=>{
   el.addEventListener("click", async ()=>{
     if(isHistoryMode()) return;
     const id=el.getAttribute("data-id");
@@ -1547,7 +1552,7 @@ function render(){
     render();
   });
 });
-  main.querySelectorAll("[data-edit-assignee]").forEach(el=>{
+  frag.querySelectorAll("[data-edit-assignee]").forEach(el=>{
   el.addEventListener("click", async (e)=>{
     e.stopPropagation();
     if(isHistoryMode()) return;
@@ -1565,7 +1570,7 @@ function render(){
     render();
   });
 });
-    main.querySelectorAll("[data-edit-task]").forEach(el=>{
+    frag.querySelectorAll("[data-edit-task]").forEach(el=>{
   el.addEventListener("click", async (e)=>{
     e.stopPropagation();
     if(isHistoryMode()) return;
@@ -1591,7 +1596,7 @@ function render(){
   });
 });
 
-  main.querySelectorAll("[data-move-section]").forEach(el=>{
+  frag.querySelectorAll("[data-move-section]").forEach(el=>{
   el.addEventListener("click", async (e)=>{
     e.stopPropagation();
     if(isHistoryMode()) return;
@@ -1607,7 +1612,7 @@ function render(){
     render();
   });
 });
-    main.querySelectorAll("[data-toggle-section]").forEach(el=>{
+    frag.querySelectorAll("[data-toggle-section]").forEach(el=>{
   el.addEventListener("click", async (e)=>{
     e.stopPropagation();
     if(isHistoryMode()) return;
@@ -1625,7 +1630,7 @@ function render(){
     render();
   });
 });
-  main.querySelectorAll("[data-remove-task]").forEach(el=>{
+  frag.querySelectorAll("[data-remove-task]").forEach(el=>{
   el.addEventListener("click", async (e)=>{
     e.stopPropagation();
     if(isHistoryMode()) return;
@@ -1642,7 +1647,7 @@ function render(){
     render();
   });
 });
-  main.querySelectorAll("[data-del-section]").forEach(el=>{
+  frag.querySelectorAll("[data-del-section]").forEach(el=>{
   el.addEventListener("click", async (e)=>{
     e.stopPropagation();
     if(isHistoryMode()) return;
@@ -1661,7 +1666,7 @@ function render(){
     showToast("場所を削除しました");
   });
 });
-  main.querySelectorAll("[data-add-btn]").forEach(btn=>{
+  frag.querySelectorAll("[data-add-btn]").forEach(btn=>{
   btn.addEventListener("click", async (e)=>{
     e.stopPropagation();
     if(isHistoryMode()) return;
@@ -1681,7 +1686,7 @@ function render(){
     showToast("タスクを追加しました");
   });
 });
-  main.querySelectorAll("[data-add-input], [data-add-assignee]").forEach(input=>{
+  frag.querySelectorAll("[data-add-input], [data-add-assignee]").forEach(input=>{
     input.addEventListener("keydown", (e)=>{
       if(e.key==="Enter"){
         const sId = input.getAttribute("data-add-input") || input.getAttribute("data-add-assignee");
@@ -1689,6 +1694,11 @@ function render(){
       }
     });
   });
+
+  // 組み立てが完了した frag を、ここで一気に main に反映する。
+  // main.innerHTML="" のような「空にしてから足す」段階を経ないので、
+  // 組み立てに時間がかかっても画面が一瞬白くならない。
+  main.replaceChildren(frag);
 
   updateProgress(totalTasks,doneTasks);
 }
