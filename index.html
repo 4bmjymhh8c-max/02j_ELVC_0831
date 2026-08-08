@@ -2549,27 +2549,40 @@ async function loadPreferencesRange(dateStrs){
 async function togglePreference(dateStr){
   if(!myName){ openNameModal(()=>togglePreference(dateStr)); return; }
   const current = preferences[dateStr] || {};
+  const wasMine = !!current[myName];
   const next = Object.assign({}, current);
-  const wasMine = !!next[myName];
   if(wasMine) delete next[myName]; else next[myName]=true;
   preferences[dateStr]=next;
-  // 対応不可に戻す場合は、優先希望も一緒に外す(対応可能な日にしか優先は付けられないため)
-  const nextPriority = Object.assign({}, priorities[dateStr] || {});
-  if(wasMine && nextPriority[myName]){ delete nextPriority[myName]; priorities[dateStr]=nextPriority; }
+
+  const patch = {};
+  patch["wants."+myName] = wasMine ? firebase.firestore.FieldValue.delete() : true;
+
+  const currentPriority = priorities[dateStr] || {};
+  if(wasMine && currentPriority[myName]){
+    const nextPriority = Object.assign({}, currentPriority);
+    delete nextPriority[myName];
+    priorities[dateStr] = nextPriority;
+    patch["priority."+myName] = firebase.firestore.FieldValue.delete();
+  }
+
   try{
-    await preferencesCol().doc(dateStr).set({ wants: next, priority: nextPriority }, { merge: true });
+    await preferencesCol().doc(dateStr).set(patch, { merge: true });
   }catch(e){ showToast("保存に失敗しました"); }
   renderDutyPanel();
 }
 async function togglePriority(dateStr){
   if(!myName){ openNameModal(()=>togglePriority(dateStr)); return; }
-  if(!(preferences[dateStr] && preferences[dateStr][myName])) return; // 対応可能な日のみ
+  if(!(preferences[dateStr] && preferences[dateStr][myName])) return;
   const current = priorities[dateStr] || {};
+  const wasOn = !!current[myName];
   const next = Object.assign({}, current);
-  if(next[myName]) delete next[myName]; else next[myName]=true;
+  if(wasOn) delete next[myName]; else next[myName]=true;
   priorities[dateStr]=next;
   try{
-    await preferencesCol().doc(dateStr).set({ priority: next }, { merge: true });
+    await preferencesCol().doc(dateStr).set(
+      { ["priority."+myName]: wasOn ? firebase.firestore.FieldValue.delete() : true },
+      { merge: true }
+    );
   }catch(e){ showToast("保存に失敗しました"); }
   renderDutyPanel();
 }
@@ -2760,7 +2773,7 @@ async function renderPrefPanel(el){
       const current = preferences[ds] || {};
       const next = Object.assign({}, current, { [myName]: true });
       preferences[ds] = next;
-      await preferencesCol().doc(ds).set({ wants: next });
+      await preferencesCol().doc(ds).set({ wants: next }, { merge: true });
     }));
     showToast("全日程を対応可能にしました");
     renderPrefPanel(el);
